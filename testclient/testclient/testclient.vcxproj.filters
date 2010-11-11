@@ -48,16 +48,16 @@
     <ClInclude Include="zc\ZCDataStruct.h">
       <Filter>zc</Filter>
     </ClInclude>
-    <ClInclude Include="platform\cutility.h">
+    <ClInclude Include="..\..\platformlib\platformlib\cutility.h">
       <Filter>platfom</Filter>
     </ClInclude>
-    <ClInclude Include="platform\InterfaceDataStruct.h">
+    <ClInclude Include="..\..\platformlib\platformlib\InterfaceDataStruct.h">
       <Filter>platfom</Filter>
     </ClInclude>
-    <ClInclude Include="platform\platform.h">
+    <ClInclude Include="..\..\platformlib\platformlib\platform.h">
       <Filter>platfom</Filter>
     </ClInclude>
-    <ClInclude Include="platform\platformhead.h">
+    <ClInclude Include="..\..\platformlib\platformlib\platformhead.h">
       <Filter>platfom</Filter>
     </ClInclude>
   </ItemGroup>

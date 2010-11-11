@@ -51,6 +51,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\platformlib\platformlib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -100,10 +101,10 @@
     <None Include="res\testclient.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="platform\cutility.h" />
-    <ClInclude Include="platform\InterfaceDataStruct.h" />
-    <ClInclude Include="platform\platform.h" />
-    <ClInclude Include="platform\platformhead.h" />
+    <ClInclude Include="..\..\platformlib\platformlib\cutility.h" />
+    <ClInclude Include="..\..\platformlib\platformlib\InterfaceDataStruct.h" />
+    <ClInclude Include="..\..\platformlib\platformlib\platform.h" />
+    <ClInclude Include="..\..\platformlib\platformlib\platformhead.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
