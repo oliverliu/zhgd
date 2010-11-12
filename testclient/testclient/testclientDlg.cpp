@@ -238,11 +238,13 @@ public:
 	void pushZC2CC_SpeedRstMsg(); //speed restrict
 	void pushCC2ZC_2ATSTrasMsg();
 	void pushZC2CC_fromATSTrasMsg();
-
+	void pushZC2CreateConnect(bool bcreate);
+	
 	void finished();
 private:
 	void pushPackZc2Atp();
 	void pushPackZc2Ato();
+
 
 	void updateIdxSt();
 private:
@@ -338,6 +340,59 @@ void CPackUtility::pushCC2ZC_RoutineMsg()
 
 	printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
 }
+
+void CPackUtility::pushZC2CreateConnect(bool bcreate)
+{
+	updateIdxSt();
+
+	
+	T_UNIT_HEAD     unithead;
+	T_MESSAGE_HEAD  msghead;
+
+	//01 001011, 0xaa, 0x00,0x00
+	unithead.unitId = 0x4baa0000;
+	unithead.unitSize = 0;
+
+	msghead.sequenceNum = 2;
+	msghead.timeStamp = 2;
+	msghead.SID = g_sid;
+	msghead.DID = g_sid;
+	msghead.msgType = g_msgType;
+    msghead.msgLen = 0;
+	
+	typedef struct _msgInter
+	{
+		PLAT_UINT8  info1;
+		PLAT_UINT8  info2;
+		PLAT_UINT32  info3;
+		PLAT_UINT32  info4;
+		PLAT_UINT16  info5;
+		PLAT_UINT16  info6;
+	} stMsgInter;
+
+	stMsgInter inter;
+	inter.info1 = bcreate ? 0x10 : 0x11;
+	inter.info2 = 0;
+	inter.info3 = g_sid;
+	inter.info4 = g_sid;
+	inter.info5 = 0;
+	inter.info6 = 0;
+	
+	msghead.msgLen = sizeof(stMsgInter);
+	unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
+
+	memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
+	m_pcurrent += sizeof(T_UNIT_HEAD);
+	
+	memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
+	m_pcurrent += sizeof(T_MESSAGE_HEAD);
+
+	memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
+	m_pcurrent += sizeof(stMsgInter);
+
+	printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
+}
+
 
 void CPackUtility::pushZC2CC_RoutinMsg()
 {
@@ -524,12 +579,17 @@ void createPacakge()
 	unsigned char* dstBuf = APP_WRITE_ADDR;
 
 	CPackUtility	packUtil(dstBuf);
-	packUtil.pushCC2ZC_RoutineMsg();
- 	packUtil.pushZC2CC_RoutinMsg();
+//	packUtil.pushCC2ZC_RoutineMsg();
+// 	packUtil.pushZC2CC_RoutinMsg();
+
 // 	packUtil.pushZC2CC_TrackMsg();
 // 	packUtil.pushZC2CC_SpeedRstMsg(); //speed restrict
 // 	packUtil.pushCC2ZC_2ATSTrasMsg();
 // 	packUtil.pushZC2CC_fromATSTrasMsg();
+
+	packUtil.pushZC2CreateConnect(true);
+	packUtil.pushZC2CreateConnect(false);
+	//packUtil.ZC2CreateConnect(false);
 	
 	packUtil.finished();
 }

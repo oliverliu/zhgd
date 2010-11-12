@@ -36,7 +36,7 @@ private:
 
 	void write2PlatBuffer(PLAT_UBYTE*  ppack);
 	void updatePlatBuffer(PLAT_UBYTE*  ppack);
-	void initPackage(PLAT_UBYTE*  ppack, int type);
+	void initPackage(PLAT_UBYTE*  ppack, PLAT_UINT len, int type);//len is T_UNIT_HEADE.size
 	void unInitPackage(PLAT_UBYTE* ppack);
 
 	void			newPackage(int type);

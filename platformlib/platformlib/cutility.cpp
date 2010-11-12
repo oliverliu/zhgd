@@ -53,10 +53,11 @@ bool CUtility::isBitSet(PLAT_UINT32 val, PLAT_UINT32 bit)
 
 PLAT_UINT32 CUtility::getBitsVal(const PLAT_UINT32 val, PLAT_UINT8 start, PLAT_UINT8 end)
 {
-	if ( end < start)
-		printf("!!!! Warning %s parameter error", "getBitsVal");
-	int tmp = (int) pow((float)2, end - start + 1) - 1;
-	return  ( tmp << start ) & val;
+	PLAT_UINT8 little = start > end ? end : start;
+	PLAT_UINT8 big    = start < end ? end : start;
+
+	int tmp = (int) pow((float)2, big - little + 1) - 1;
+	return  (( tmp << little ) & val ) >> little;
 }
 
 PLAT_UINT32 CUtility::setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_UINT8 end, PLAT_UINT32 val)
@@ -73,9 +74,27 @@ void CUtility::pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack)
 	memcpy(&idxData, bigPackHead, sizeof(T_DATA_INDEX));
 	
 	PLAT_UINT32 count = idxData.regionUnitNum;
-	PLAT_UBYTE* plast = bigPackHead + idxData.unitAddrOffset[count - 1 ];
-	PLAT_UINT32 len = getLittlePackSize(plast);
-	plast += len;
+	if (count > 255 || count < 0)
+	{
+		printf("Warning: index regionUnitNum of big package ERROR, Now is %d\n", count);
+		return;
+	}
+
+	PLAT_UBYTE* plast =  NULL;
+	PLAT_UINT32 len = 0;
+
+	if (count == 0)
+	{
+		//This is the first time to push a little package into big package.
+		//now count is 0
+		plast = bigPackHead + idxData.unitAddrOffset[0];
+	}
+	else
+	{
+		plast = bigPackHead + idxData.unitAddrOffset[count  - 1];
+		len = getLittlePackSize(plast);
+		plast += len;
+	}
 	
 	len = getLittlePackSize(ppack);
 	memcpy( plast, ppack, len);
@@ -162,7 +181,8 @@ void CUtility::initBigPackIdx(PLAT_UBYTE* p)
 	memset(&idx, 0x00, sizeof(T_DATA_INDEX));
 	idx.platformHealth = 1;
 	idx.platformStatus = 1;
-	idx.regionUnitNum = 0;
+	idx.regionUnitNum = 0; //Range: 1~256
+	idx.unitAddrOffset[0] = sizeof(T_DATA_INDEX);
 	updateBigPackIdx(p, idx);
 }
 
@@ -482,7 +502,7 @@ bool CLittlePack::hasMsgHeader() const
 // get package data type from uint id
 PLAT_UINT32 CLittlePack::dataType() const
 {
-	return CUtility::getBitsVal(m_header.unitId, 24,29);
+	return CUtility::getBitsVal(m_header.unitId, 24,29)  ;
 	return m_header.unitId & 0x3F000000; 
 }
 

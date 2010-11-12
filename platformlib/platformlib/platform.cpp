@@ -276,11 +276,11 @@ void CAppInterface::unInitPackage(PLAT_UBYTE* _ppack)
 }
 
 //init unit package
-void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, int type)
+void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 {
 	T_UNIT* ppack = (T_UNIT*) _ppack;
-	ppack->unitData = new PLAT_BYTE[ppack->unitSize];
-	memset(ppack->unitData, 0, ppack->unitSize * sizeof(PLAT_UBYTE));
+	ppack->unitSize = len;
+	ppack->unitData = ( PLAT_BYTE* )(_ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD));
 
 	switch (type)
 	{
@@ -291,9 +291,8 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x23); //0x23
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
-		
-			ppack->unitSize = 1;
 			
+
 			*(ppack->unitData) = 0x23;
 		}	
 		break;
@@ -304,8 +303,6 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x20); //0x20
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
-			
-			ppack->unitSize = 1;
 
 			*(ppack->unitData) = 0x20;
 		}
@@ -319,7 +316,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, int type)
 
 void CAppInterface::write2PlatBuffer(PLAT_UBYTE*  ppack)
 {
-	//ensure platBuf has index structure.
+	//ensure platBuf has index structure. Ensure the data pointer is after size pointer!
 	CUtility::pushBackPack(platBuf, ppack);
 
 	//m_vecPlatUnitID.push_back(PLATUNITID(CUtility::getLittlePackSID(ppack), CUtility::getLittlePackDID(ppack)));
@@ -369,10 +366,18 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 				//create connect command
 
 				//update states to platform buffer
-				T_UNIT  pack;
-				initPackage((PLAT_UBYTE*)&pack, 0);
-				write2PlatBuffer((PLAT_UBYTE*)&pack);
-				unInitPackage((PLAT_UBYTE*)&pack);
+				PLAT_UBYTE pack[1024];
+				memset(pack, 0, 1024);
+				PLAT_UINT len = 1;
+				if ( len >= 1024) 
+				{
+					printf("Warning: little package size > 1024, it is now %d.", len);
+					printf("Warning: Create Add failed!");
+					return;
+				}
+				initPackage(pack,len, 0);
+				write2PlatBuffer(pack);
+				//unInitPackage((PLAT_UBYTE*)&pack);
 				
 				//update terminals state
 				m_pzc->updateNotifyTerminal(dstID, true);
@@ -382,10 +387,18 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 			{
 				printf("Connect Remove\n");
 
-				T_UNIT  pack;
-				initPackage((PLAT_UBYTE*)&pack, 1);
-				updatePlatBuffer((PLAT_UBYTE*)&pack);
-				unInitPackage((PLAT_UBYTE*)&pack);
+				//update states to platform buffer
+				PLAT_UBYTE pack[1024];
+				PLAT_UINT len = 1;
+				if ( len >= 1024) 
+				{
+					printf("Warning: little package size > 1024, it is now %d.\n", len);
+					printf("Warning: Create Remove failed!\n");
+					return;
+				}
+				initPackage(pack,len, 1);
+				write2PlatBuffer(pack);
+				//unInitPackage((PLAT_UBYTE*)&pack);
 
 				m_pzc->updateNotifyTerminal(dstID, false);
 			}

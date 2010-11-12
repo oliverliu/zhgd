@@ -142,8 +142,8 @@ private:
 	PLAT_UINT32 getDstIDInternal() const;
 private:
 	PLAT_UINT32 m_fromID;
-	PLAT_UBYTE* m_pHeader;
-	PLAT_UBYTE* m_pData; // include msg header
+	PLAT_UBYTE* m_pHeader; //unit head address
+	PLAT_UBYTE* m_pData; // msg header address if msg header exist
 	T_UNIT_HEAD m_header;
 	PLAT_UINT32 m_idx; // its index in composited package (big package), start from 0
     PLAT_UBYTE* m_pHeaderParent;
