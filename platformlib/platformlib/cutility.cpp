@@ -10,7 +10,7 @@
 #include "InterfaceDataStruct.h"
 #include "cutility.h"
 
-//#include <stdarg.h>
+#include <stdarg.h>
 //int msglevel = 3; /* the higher, the more messages... */
 // 
 // #if defined(NDEBUG) && defined(__GNUC__)
@@ -33,7 +33,7 @@
 // #endif /* NDEBUG */
 // #endif /* NDEBUG && __GNUC__ */
 // }
-
+//
 // 
 // void pFatal(const char* format, ...)   { return pmesg(0, format, ...); }
 // void pWarning(const char* format, ...) { return pmesg(1, format, ...); }
@@ -347,31 +347,33 @@ void CLittlePack::init()
 
 PLAT_UINT32 CLittlePack::getDstID() const
 {
-	PLAT_UINT32 Tempreturn = 0;
-	PLAT_UINT32 fromID = m_fromID;
-	
-	switch( (fromID & 0xE0000000) >> 29 )
-	{
-	case ATS:
-	case CBI:
-		break;
-	case ZC:
-		/*若数据源为ZC，根据单元ID得到数据单元的目的地ID*/
-		Tempreturn =ZC_GetDestID();		
-		break;
-	case ATO:		
-		Tempreturn =ATO_GetDestID();/*若数据源为ATO，根据单元ID得到数据单元的目的地ID*/					
-		break;
-	case ATP:					
-		Tempreturn =ATP_GetDestID();/*若数据源为ATP，根据单元ID得到数据单元的目的地ID*/		
-		break;
-	case RS:					
-		Tempreturn =RS_GetDestID();/*若数据源为RS，根据单元ID得到数据单元的目的地ID*/						
-		break;		
-	default:
-		break;
-	}
-	return Tempreturn;	
+	return CUtility::getLittlePackDID((PLAT_UBYTE*) this);
+
+	//PLAT_UINT32 Tempreturn = 0;
+	//PLAT_UINT32 fromID = m_fromID;
+	//
+	//switch( (fromID & 0xE0000000) >> 29 )
+	//{
+	//case ATS:
+	//case CBI:
+	//	break;
+	//case ZC:
+	//	/*若数据源为ZC，根据单元ID得到数据单元的目的地ID*/
+	//	Tempreturn =ZC_GetDestID();		
+	//	break;
+	//case ATO:		
+	//	Tempreturn =ATO_GetDestID();/*若数据源为ATO，根据单元ID得到数据单元的目的地ID*/					
+	//	break;
+	//case ATP:					
+	//	Tempreturn =ATP_GetDestID();/*若数据源为ATP，根据单元ID得到数据单元的目的地ID*/		
+	//	break;
+	//case RS:					
+	//	Tempreturn =RS_GetDestID();/*若数据源为RS，根据单元ID得到数据单元的目的地ID*/						
+	//	break;		
+	//default:
+	//	break;
+	//}
+	//return Tempreturn;	
 }
 
 PLAT_UINT32 CLittlePack::getDstIDInternal() const
@@ -389,15 +391,16 @@ PLAT_UINT32 CLittlePack::getDstIDInternal() const
 
 PLAT_UINT32 CLittlePack::getSrcID() const
 {
-	PLAT_UINT32 ret = 0;
-	if (hasMsgHeader())
-	{
-		T_MESSAGE_HEAD messageHead;
-		memcpy(&messageHead, m_pData, sizeof(T_MESSAGE_HEAD));
-		ret = messageHead.SID;
-	}
-	return ret;
-	
+	return CUtility::getLittlePackSID((PLAT_UBYTE*) this);
+
+	//PLAT_UINT32 ret = 0;
+	//if (hasMsgHeader())
+	//{
+	//	T_MESSAGE_HEAD messageHead;
+	//	memcpy(&messageHead, m_pData, sizeof(T_MESSAGE_HEAD));
+	//	ret = messageHead.SID;
+	//}
+	//return ret;
 }
 
 
@@ -503,7 +506,7 @@ bool CLittlePack::hasMsgHeader() const
 PLAT_UINT32 CLittlePack::dataType() const
 {
 	return CUtility::getBitsVal(m_header.unitId, 24,29)  ;
-	return m_header.unitId & 0x3F000000; 
+	//return m_header.unitId & 0x3F000000; 
 }
 
 // 1011

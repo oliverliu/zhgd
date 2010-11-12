@@ -149,13 +149,6 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
 	return 0;
 }
 
-//******************************************************************************
-// Function: CAppInterface::AppWrite
-// Brief:   平台提供的写数据包函数 
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
 PLAT_INT32 CAppInterface::AppWrite()
 {
 	int j;
@@ -437,13 +430,7 @@ PLAT_UINT32 getPlatformID( PLAT_UINT32 srcid)
 {
 	return (srcid&0x1FFFFFFF)|0xC0000000;     
 }
-//******************************************************************************
-// Function: CAppInterface::AppRead
-// Brief:   平台提供的数据包读取函数 
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
+
 PLAT_INT32 CAppInterface::AppRead()
 {	
 	int len;
@@ -593,13 +580,6 @@ PLAT_INT32 CAppInterface::AppRead()
 	return 0;
 }
 
-//******************************************************************************
-// Function: CAppInterface::AppWrite
-// Brief:   为测试写功能添加的写函数 
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
 PLAT_INT32 CAppInterface::AppWrite(char *dst)
 {
 	memset(uintBuf,'a',100);
@@ -607,13 +587,6 @@ PLAT_INT32 CAppInterface::AppWrite(char *dst)
 	return 0;
 }
 
-//******************************************************************************
-// Function: CAppInterface::AppRead
-// Brief:   为测试读功能添加的读函数 
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
 PLAT_INT32 CAppInterface::AppRead(char *src)
 {
 	int i;
