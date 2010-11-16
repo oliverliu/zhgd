@@ -7,6 +7,9 @@
 //#include "packetprocess.h"
 #pragma pack(1)																		/*设定为1字节对齐*/
 
+// The data in memory that pointer point is big endian
+// The data in internal that IS NOT pointer suggest using little endian
+// The data in internal that IS pointer suggest using little endian
 class CUtility
 {
 public:
@@ -19,8 +22,11 @@ public:
 	static void outputPackage(const PLAT_UBYTE * buf, FILE* fp);
 	static PLAT_UINT32 BetoLe32(const PLAT_UINT32 val );
 	static PLAT_UINT16 BetoLe16(const PLAT_UINT16 val);
+	static PLAT_UINT64 BetoLe64(const PLAT_UINT64 val );
+
 	static PLAT_UINT32 LetoBe32(const PLAT_UINT32 val);
 	static PLAT_UINT16 LetoBe16(const PLAT_UINT16 val);
+	static PLAT_UINT64 LetoBe64(const PLAT_UINT64 val);
 
 	//
 	static void pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack);
@@ -62,7 +68,7 @@ public:
 
 	//sequence push package to build a package
 	void pushPack(int type);
-	void pushPack(T_UNIT*  littlepack);
+	void pushPack(PLAT_UBYTE*  littlepack);
 
 	//at end push package at end of big package
 
@@ -85,9 +91,6 @@ private:
 	void pushPackzc2Broder();
 private:
 	PLAT_UBYTE * m_phead; //Big package start address.
-	PLAT_UBYTE * m_pcurrent;
-	T_DATA_INDEX    m_index;
-	int  m_seqnum;
 };
 
 
@@ -130,6 +133,7 @@ public:
 
 	PLAT_UINT32 getUnitID() const {return m_header.unitId;}
 	PLAT_UBYTE* getDataHeader() const { return m_pData;}
+	void        updateUID(PLAT_UINT32 id) ;
 
 	PLAT_UINT32 getDstID() const;
 	PLAT_UINT32 getSrcID() const;
@@ -153,7 +157,7 @@ private:
 	PLAT_UINT32 m_fromID;
 	PLAT_UBYTE* m_pHeader; //unit head address
 	PLAT_UBYTE* m_pData; // msg header address if msg header exist
-	T_UNIT_HEAD m_header;
+	T_UNIT_HEAD m_header;// the content has been change to little-endian
 	PLAT_UINT32 m_idx; // its index in composited package (big package), start from 0
     PLAT_UBYTE* m_pHeaderParent;
 };

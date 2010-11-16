@@ -27,7 +27,9 @@ typedef struct
 {
 	PLAT_UINT32  unitId;		/*单元ID*/       
 	PLAT_UINT32  unitSize;		/*单元数据大小*/
-	PLAT_BYTE*	 unitData;     // the address has limited, it must be follow unitSize in memory
+	// the address has limited, it must be follow unitSize in memory
+	// the value is _ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD)
+	PLAT_BYTE*	 unitData;
 }T_UNIT;
 
 
@@ -60,15 +62,15 @@ typedef struct
 
 
 // kinds of type data structure
-typedef T_UNIT stInputAppStatus;
-typedef T_UNIT stInputComMsg;
-typedef T_UNIT stComLinkStatus;
-typedef T_UNIT stDbStatus;
-typedef T_UNIT stOutputComRegion;
-typedef T_UNIT stLinkCtrl;
-typedef T_UNIT stDbCtrl;
-typedef T_UNIT stEventRecord;
-typedef T_UNIT stOutputAppStatus;
+//typedef T_UNIT stInputAppStatus;
+//typedef T_UNIT stInputComMsg;
+//typedef T_UNIT stComLinkStatus;
+//typedef T_UNIT stDbStatus;
+//typedef T_UNIT stOutputComRegion;
+//typedef T_UNIT stLinkCtrl;
+//typedef T_UNIT stDbCtrl;
+//typedef T_UNIT stEventRecord;
+//typedef T_UNIT stOutputAppStatus;
 
 
 /*------------------------------------------

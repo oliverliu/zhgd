@@ -13,7 +13,8 @@
 
 #pragma pack(1)																		/*设定为1字节对齐*/
 
-#define _USING_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
+
+#define _MESSAGE_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
 
 class 	CZc;
 class  packetprocess;
@@ -66,9 +67,6 @@ private:
 	PLAT_UINT8 uintBuf[SIZE];														/*暂存数据包中各单元的数据*/
     PLAT_UINT8 platBuf[SIZE];														/*暂存平台数据缓冲区中弹出的单元数据*/
     
-	PLAT_UINT64   readcount;														/*记录平台的读周期个数*/
-	PLAT_UINT64   writecount;														/*记录平台的写周期个数*/
-
 	CZc*      m_pzc;
 
 	FILE	*m_fpFromTerminalLog;

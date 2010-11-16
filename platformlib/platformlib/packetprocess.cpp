@@ -41,29 +41,25 @@ bool packetprocess::hasMsgHeader()
 {
 	return true;
 }
-//******************************************************************************
-// Function: packetprocess::Decoder
-// Brief:    平台解包程序，得到接收数据包中各单元的单元ID和单元大小 
-// Returns:  void
-// Author:	 刘志盼
-// Data:	 2010/10/09
-//******************************************************************************
+
+#include "cutility.h"
+
 void packetprocess::Decoder(PLAT_UINT8* uin)
 {
 	int i, len;
 	//clear arrays data?
 
 	memcpy(&index, uin, sizeof(index));
-	len =index.regionUnitNum;										/*得到大数据包中单元的个数*/					
+	len = CUtility::BetoLe32( index.regionUnitNum);										/*得到大数据包中单元的个数*/					
 	if(len ==0)														/*若单元个数为0，返回不处理*/
 	{
 		printf("Data is NULL\n");
 		return;
 	}
 
-	for(i =0; i <index.regionUnitNum; i++)
+	for(i =0; i <len; i++)
 	{
-		paddr =uin+index.unitAddrOffset[i];							/*根据各单元的偏移量求单元首地址*/
+		paddr = uin + CUtility::BetoLe32(index.unitAddrOffset[i]);							/*根据各单元的偏移量求单元首地址*/
 		memcpy(&id[i], paddr, sizeof(id[i]));						/*得到数据包中各单元的单元ID*/
 
         paddr +=sizeof(id[i]);                       
@@ -86,7 +82,7 @@ void packetprocess::Encoder(PLAT_UINT8* last, PLAT_UINT8* add, int iunitoder)
 
 	if(iunitoder ==0)
 	{
-		index.unitAddrOffset[0] =sizeof(index);						/*设定待打数据包中第一个单元的偏移量*/
+		index.unitAddrOffset[0] = sizeof(index);						/*设定待打数据包中第一个单元的偏移量*/
 		paddr =last+index.unitAddrOffset[0];						/*得到待打数据包第一个数据单元的首地址*/
 		memcpy(&unithead, add, sizeof(unithead));					
 

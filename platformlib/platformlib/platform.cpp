@@ -43,8 +43,6 @@ PLAT_UINT32 CAppInterface::srcID = 0;
 
 CAppInterface::CAppInterface()
 {
-	readcount =0;									/*记录平台的读周期*/	
-	writecount =0;									/*记录平台的写周期*/
 	m_pzc = new CZc();
 	m_pei = new packetprocess();
 
@@ -152,63 +150,48 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
 	sprintf(src, "%08x", sid);
 	memset(send, '\0', NETSIZE);
 	memset(recv, '\0', NETSIZE);
+
+	CUtility::initBigPackIdx(send);
+	CUtility::initBigPackIdx(recv);
 	return 0;
 }
 
 PLAT_INT32 CAppInterface::AppWrite()
 {
+	//debug client to platform data
 	fprintf(m_fpFromTerminalLog, "Write data: \n");
 	CUtility::outputPackage(APP_WRITE_ADDR,m_fpFromTerminalLog);
 
 	int j;
-	writecount ++;
-    m_pei->pPlataddr = platBuf;
-	m_pei->Decoder(send);								 /*平台对接收到的数据包进行解包，得到各单元的单元ID和单元大小*/
-	
+
+ //   m_pei->pPlataddr = platBuf;
+	//m_pei->Decoder(send);		
+	//
 	
 	if (srcID == 0)
 	{
 		PLAT_UBYTE *p = CUtility::getUnitHead(send, 0);
 		srcID = CUtility::getLittlePackSID(p);
 		sprintf(src, "%08x", srcID);		
-	}
+	}         
 
-	if(app_display() ==1)
-	{
-		printf("平台的写周期为：%u\n", writecount);
-		printf("SEND DATA BEGAN------------------------------SEND DATA BEGAN \n");
-		if(app_displaybig() ==1)
-		{
-			printf("发送的大包内容为：\n");
-			OutputUint(send, NETSIZE);
-		}
-		printf("发送数据包源ID：%x\n", srcID);
-		printf("发送数据包中数据单元个数=%u\n", m_pei->index.regionUnitNum); 
-	}	           
-
-	for(j =0;j < m_pei->index.regionUnitNum;j++)		/*循环遍历数据包中各数据单元，得到各单元的目的地ID*/           
+	int count = CUtility::getUnitCounts(send);
+	/*循环遍历数据包中各数据单元，得到各单元的目的地ID*/ 
+	for(j =0;j < count;j++)		          
 	{		
-		PLAT_UINT8 * addr =send+m_pei->index.unitAddrOffset[j]; 
-		memcpy(uintBuf, addr, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);//include msg header
+		PLAT_UINT8 * addr = CUtility::getUnitHead(send, j); // send+m_pei->index.unitAddrOffset[j]; 
+		//memcpy(uintBuf, addr, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);//include msg header
+		memcpy(uintBuf, addr,CUtility::getLittlePackSize(addr) );//include msg header
 
 		dstID = CUtility::getLittlePackDID(addr);
 		//dstID = m_pei->GetDestID(srcID, send, j, m_pei->id[j]);	
-		if(app_display() ==1)
-		{
-			printf("发送数据包单元%d的单元ID：%x 目的地ID: %x\n", j,m_pei->id[j],dstID);
-		}
+		
 		sprintf(dst,"%08x",dstID);
 		
 		procMsgOut(uintBuf);
 		procConnectControl(uintBuf);
 		procBroadMsg(uintBuf);
 		procInputAppStatus(uintBuf);
-
-		if(app_display() ==1)
-		{
-			printf("发送数据包单元%d的数据为：\n",j);
-			OutputUint(uintBuf, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);
-		}
 
 		if((dstID&0x00000FF0)==0x00000FF0)				//说明目的地为CC，此时应该将对应的ATP和ATO中同时压入内容
 		{
@@ -223,10 +206,6 @@ PLAT_INT32 CAppInterface::AppWrite()
 		else
 			app_rpush(dst);								/*将数据包中各数据单元压入相应目的地ID的缓冲区中*/                    	
 	}//end of for
-
-	if(app_display() ==1)
-		printf("SEND DATA END------------------------------SEND DATA END \n");
-
 	return 0;
 }
 
@@ -267,22 +246,22 @@ void CAppInterface::procConnectState(PLAT_UBYTE* p)
 
 void CAppInterface::unInitPackage(PLAT_UBYTE* _ppack)
 {
-	T_UNIT* ppack = (T_UNIT*) _ppack;
-	if (ppack != NULL)
-	{
-		if (ppack->unitData != NULL)
-		{
-			delete []ppack->unitData;
-			ppack->unitData = NULL;
-		}
-	}
+	//T_UNIT* ppack = (T_UNIT*) _ppack;
+	//if (ppack != NULL)
+	//{
+	//	if (ppack->unitData != NULL)
+	//	{
+	//		delete []ppack->unitData;
+	//		ppack->unitData = NULL;
+	//	}
+	//}
 }
 
 //init unit package
 void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 {
 	T_UNIT* ppack = (T_UNIT*) _ppack;
-	ppack->unitSize = len;
+	ppack->unitSize = CUtility::LetoBe32(len);
 	ppack->unitData = ( PLAT_BYTE* )(_ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD));
 
 	switch (type)
@@ -295,7 +274,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x23); //0x23
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 			
-
+			ppack->unitId = CUtility::LetoBe32(ppack->unitId);
 			*(ppack->unitData) = 0x23;
 		}	
 		break;
@@ -307,6 +286,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x20); //0x20
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 
+			ppack->unitId = CUtility::LetoBe32(ppack->unitId);
 			*(ppack->unitData) = 0x20;
 		}
 		break;
@@ -359,7 +339,8 @@ void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 	CLittlePack parser(srcID, p);
 	if (parser.isMsgOut())
 	{
-		CUtility::setBitsVal(parser.getUnitID(), 24,29, 5);//0000110
+		PLAT_UINT32 val = CUtility::setBitsVal(parser.getUnitID(), 24,29, 5);//0000110
+		parser.updateUID(val);
 		//update connect control
 	}
 }
@@ -381,11 +362,12 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 				//create connect command
 
 				//update states to platform buffer
+				//content shoule be big-endian
 				PLAT_UBYTE pack[1024];
 				memset(pack, 0, 1024);
 				PLAT_UINT len = 1;
 				if ( len >= 1024) 
-				{
+				{	
 					printf("Warning: little package size > 1024, it is now %d.", len);
 					printf("Warning: Create Add failed!");
 					return;
@@ -459,7 +441,6 @@ PLAT_UINT32 getPlatformID( PLAT_UINT32 srcid)
 PLAT_INT32 CAppInterface::AppRead()
 {	
 	int len;
-//	int platlen;
 	int j;
 
 	if (srcID == 0)
@@ -476,45 +457,30 @@ PLAT_INT32 CAppInterface::AppRead()
 		PlatformSleep(10);							/*休眠10ms*/      
 	}
 	
-	readcount ++;
-	if(app_display() == 1)
-	{
-		printf("平台的读周期为：%u\n", readcount);
-		printf("RECV DATA BEGAN------------------------------RECV DATA BEGAN \n");
-	}
-
-	len = app_llen(src);							/*得到平台的数据源缓冲区中数据单元的个数    */
-	if(app_display() ==1)
-		printf("读取端缓冲区中单元个数：src : len = %s : %d\n",src,len);
-
-	m_pei->paddr =0;
+	len = app_llen(src);
 	for(j =0;j <len;j++)
 	{
 		memset(&uintBuf, 0x00, SIZE);
-		app_lpop(src);								/*将平台的数据源缓冲区中数据单元从缓冲区中弹出*/ 
+		/*将平台的数据源缓冲区中数据单元从缓冲区中弹出*/
+		app_lpop(src);								 
 
-		if(app_display() ==1)
-		{
-		   T_UNIT_HEAD pophead;
-		   memcpy(&pophead, uintBuf, sizeof(pophead));
-		   printf("%s缓冲区中弹出的单元%d的单元ID：%x\n", src,j,pophead.unitId);
-           printf("%s缓冲区中弹出的单元%d的数据为：\n", src,j);
-		   OutputUint(uintBuf, sizeof(pophead)+pophead.unitSize);    /*将平台的数据源缓冲区中弹出的数据打印出来    */
-		}
-  	
-		m_pei->Encoder(recv, uintBuf, j);               /*对平台的数据源缓冲区中弹出的数据单元进行组包*/      
+		CUtility::pushBackPack(recv, uintBuf);
+  		/*对平台的数据源缓冲区中弹出的数据单元进行组包*/
+		//m_pei->Encoder(recv, uintBuf, j);                     
 	}
 
-	if(!len ==0)									/*若数据源缓冲区不为空,将数据包写入指定的数据首地址处*/
-	{
-		//update index area data
-		m_pei->index.regionUnitNum = len;
-		memcpy(recv, &m_pei->index, sizeof(m_pei->index));
-	}
+	///*若数据源缓冲区不为空,将数据包写入指定的数据首地址处*/
+	//if(!len ==0)									
+	//{
+	//	//update index area data
+	//	m_pei->index.regionUnitNum = len;
+	//	memcpy(recv, &m_pei->index, sizeof(m_pei->index));
+	//}
 
 	platID = getPlatformID(srcID);         /*得到数据源对应的平台ID						*/        
 	sprintf(plat,"%08x",platID);
 
+	//------------------------------
 	//get platform data for read
 	//read little package from platform buffer and push little package to big package
 	PLAT_UINT32 unitCounts = CUtility::getUnitCounts(platBuf);
@@ -524,85 +490,9 @@ PLAT_INT32 CAppInterface::AppRead()
 	{
 		PLAT_UBYTE * p = CUtility::getUnitHead(platBuf, idx);
 		CUtility::pushBackPack(recv, p);
-
-		if(app_display() ==1)
-		{
-			PLAT_UINT32 popid;
-			memcpy(&popid, p, 4);
-			printf("平台%s缓冲区中弹出的单元%d的单元ID：%x\n", plat,idx, popid);
-			printf("平台%s缓冲区中弹出的单元%d的数据为：\n", plat, idx);     
-			OutputUint(p, SIZE );
-		}
 	}
-	
-// 
-//     platID = getPlatformID();         /*得到数据源对应的平台ID						*/        
-//     sprintf(plat,"%08x",platID);
-// 
-// 	platlen =app_llen(plat);						/*得到平台缓冲区中数据单元的个数				*/
-// 	if(app_display() ==1)
-// 		printf("读取的平台中单元个数：plat:platlen =%s:%d\n", plat, platlen);
-// 
-// 	for(j =len; j <len+platlen; j++)
-// 	{
-// 		app_lpop(plat);								/*将平台缓冲区中的数据单元弹出					*/
-//        
-// 		if(app_display() ==1)
-// 		{
-// 			PLAT_UINT32 popid;
-// 			memcpy(&popid, uintBuf, 4);
-// 			printf("平台%s缓冲区中弹出的单元%d的单元ID：%x\n", plat, j-len, popid);
-// 			printf("平台%s缓冲区中弹出的单元%d的数据为：\n", plat, j-len);     
-// 			OutputUint(uintBuf, SIZE );
-// 		}
-// 		
-// 		m_pei->HandlePlatData(srcID, uintBuf, platBuf);			/*根据平台缓冲区中数据单元内容得到平台待发送的内容*/
-// 		if(app_display() ==1)
-// 		{
-// 			printf("平台%s返回给%s的数据为：\n", plat,src);
-// 			OutputUint(platBuf, SIZE );
-// 		}
-// 
-//         m_pei->Encoder(recv, platBuf, j);				/*将平台待发送的内容添加到待发送数据包中		  */		 
-// 	}
-// 	
 
-	if(!len ==0)									/*若数据源缓冲区不为空,将数据包写入指定的数据首地址处*/
-	{
-		//update index area data
-// 		m_pei->index.regionUnitNum = len+platlen;
-// 		memcpy(recv, &m_pei->index, sizeof(m_pei->index));
-
-		if(app_display() ==1)
-		{
-			if(app_displaybig() ==1)
-			{
-				printf("%s读取到大包数据为：\n",src);
-				OutputUint(recv, NETSIZE);
-			}
-		    printf("%s读取到的大包中单元个数： %d\n", src, m_pei->index.regionUnitNum);
-		}
-
-		//only save region unit data for debug
-		if(app_display() ==1)
-		{
-			for(j =0; j <m_pei->index.regionUnitNum; j++)
-			{
-				memcpy(&m_pei->unithead, recv+m_pei->index.unitAddrOffset[j], sizeof(m_pei->unithead));
-				memcpy(&uintBuf, recv+m_pei->index.unitAddrOffset[j], sizeof(m_pei->unithead)+m_pei->unithead.unitSize);
-		       		
-				printf("%s读取到的单元%d的单元ID：%x 单元大小：%u\n", 
-					src, j, m_pei->unithead.unitId,m_pei->unithead.unitSize);
-				printf("%s读取到得单元%d的数据为：\n", src, j);
-				OutputUint(uintBuf, sizeof(m_pei->unithead)+m_pei->unithead.unitSize);
-			}
-		}
-	}
-	
-	if(app_display() ==1)
-		printf("RECV DATA END------------------------------RECV DATA END \n");
-
-
+	//debug
 	fprintf(m_fpFromTerminalLog, "Read data: \n");
 	CUtility::outputPackage(APP_READ_ADDR,m_fpFromTerminalLog);
 	CUtility::outputPackage(platBuf,m_fpFromTerminalLog);

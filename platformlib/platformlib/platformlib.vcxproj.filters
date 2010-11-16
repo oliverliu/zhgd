@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="interface">
+      <UniqueIdentifier>{c5ab4831-a060-47ad-96d9-52660a210c9d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -32,6 +35,9 @@
     </ClCompile>
     <ClCompile Include="wintimer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="platforminterface.cpp">
+      <Filter>interface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -58,6 +64,9 @@
     </ClInclude>
     <ClInclude Include="wintimer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="platforminterface.h">
+      <Filter>interface</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

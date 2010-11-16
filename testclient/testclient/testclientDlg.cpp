@@ -13,6 +13,11 @@
 
 #include "zc\ZCDataStruct.h"
 
+#include "platform.h"
+#include "platformhead.h"
+#include "cutility.h"
+#include "platforminterface.h"
+
 #define ZC5		0x20000005 
 #define CC5    0x00000FF5        //暂定ZC发送给CC5的数据包的目的地ID
 
@@ -167,9 +172,7 @@ HCURSOR CTestClientDlg::OnQueryDragIcon()
 
 
 
-#include "platform.h"
-#include "platformhead.h"
-#include "cutility.h"
+
 
 static void outputPackage(const PLAT_UBYTE * buf, FILE* fp)
 {
@@ -204,11 +207,14 @@ void CTestClientDlg::OnBnClickedButton1()
 	static int i = 0;
 	if ( i == 0)
 	{
-		app.AppInit();
+		//app.AppInit();
+		InitPlatformInterface();
 	}
 	fprintf(fp, "\n\nTest NO.%d\n", i++);
 
-	app.AppRead();
+	//app.AppRead();
+	ReadFormPlatform();
+	
 	fprintf(fp, "READ: \n");
 	outputPackage(APP_READ_ADDR,fp);
 
@@ -217,7 +223,8 @@ void CTestClientDlg::OnBnClickedButton1()
 
 	fprintf(fp, "Write: \n");
 	outputPackage(APP_WRITE_ADDR, fp);
-	app.AppWrite();
+	//app.AppWrite();
+	WriteToPlatform();
 
     fclose(fp);
 }
@@ -246,116 +253,125 @@ private:
 	void updateIdxSt();
 private:
 	PLAT_UBYTE * m_phead;
-	PLAT_UBYTE * m_pcurrent;
-	T_DATA_INDEX    m_index;
-	int  m_seqnum;
+	//PLAT_UBYTE * m_pcurrent;
+	//T_DATA_INDEX    m_index;
+	//int  m_seqnum;
 };
 
 void CPackUtility::updateIdxSt()
 {
-	m_seqnum++;
-	if ( m_seqnum > 255)
-	{
-		printf("!!!!!!Waring package sum large than 256, now is %d", m_seqnum + 1); 
-		return;
-	}
+	//m_seqnum++;
+	//if ( m_seqnum > 255)
+	//{
+	//	printf("!!!!!!Waring package sum large than 256, now is %d", m_seqnum + 1); 
+	//	return;
+	//}
 
-	m_index.unitAddrOffset[m_seqnum] = m_pcurrent - m_phead;
-	m_index.regionUnitNum =  m_seqnum + 1;
+	//m_index.unitAddrOffset[m_seqnum] = m_pcurrent - m_phead;
+	//m_index.regionUnitNum =  m_seqnum + 1;
 }
 
 void CPackUtility::pushCC2ZC_RoutineMsg()
 {
-	updateIdxSt();
+	//updateIdxSt();
 
-	
-	T_UNIT_HEAD     unithead;
-	T_MESSAGE_HEAD  msghead;
+	//
+	//T_UNIT_HEAD     unithead;
+	//T_MESSAGE_HEAD  msghead;
 
-	unithead.unitId = 0x01;
-	unithead.unitSize = 0;
+	//unithead.unitId = 0x01;
+	//unithead.unitSize = 0;
 
-	msghead.sequenceNum = 2;
-	msghead.timeStamp = 2;
-	msghead.SID = g_sid;
-	msghead.DID = g_did;
-	msghead.msgType = g_msgType;
-    msghead.msgLen = 0;
-	
-	typedef struct _msgInter
-	{
-		PLAT_UINT32 info1[14];
-		PLAT_UINT8  info2[9];
-		PLAT_UINT32 info3;
-		PLAT_UINT8  info4[2];
-		PLAT_UINT32 info5[2];
-	} stMsgInter;
+	//msghead.sequenceNum = 2;
+	//msghead.timeStamp = 2;
+	//msghead.SID = g_sid;
+	//msghead.DID = g_did;
+	//msghead.msgType = g_msgType;
+ //   msghead.msgLen = 0;
+	//
+	//typedef struct _msgInter
+	//{
+	//	PLAT_UINT32 info1[14];
+	//	PLAT_UINT8  info2[9];
+	//	PLAT_UINT32 info3;
+	//	PLAT_UINT8  info4[2];
+	//	PLAT_UINT32 info5[2];
+	//} stMsgInter;
 
-	stMsgInter inter;
-	inter.info1[0] = msghead.DID;
-	inter.info1[1] = msghead.SID;
-	inter.info1[2] = msghead.msgType;
-	inter.info1[3] = sizeof(stMsgInter ) - 4 * sizeof(PLAT_UINT32);
+	//stMsgInter inter;
+	//inter.info1[0] = msghead.DID;
+	//inter.info1[1] = msghead.SID;
+	//inter.info1[2] = msghead.msgType;
+	//inter.info1[3] = sizeof(stMsgInter ) - 4 * sizeof(PLAT_UINT32);
 
-	//info1
-	for( int i = 4; i < 14; i++ )
-		inter.info1[i] = 0x01;
-	
-	//change special value
-	inter.info1[5] = 0x02;
-	inter.info1[6] = 0x10;
+	////info1
+	//for( int i = 4; i < 14; i++ )
+	//	inter.info1[i] = 0x01;
+	//
+	////change special value
+	//inter.info1[5] = 0x02;
+	//inter.info1[6] = 0x10;
 
-	//info2
-	for(int i = 0; i < 9; i++ )
-		inter.info2[i] = 0xa0;
-	
-	inter.info2[0] = 0xAA;
-	inter.info2[4] = 0x8;
+	////info2
+	//for(int i = 0; i < 9; i++ )
+	//	inter.info2[i] = 0xa0;
+	//
+	//inter.info2[0] = 0xAA;
+	//inter.info2[4] = 0x8;
 
-	//info3
-	inter.info3 = 0x11;
+	////info3
+	//inter.info3 = 0x11;
 
-	//info4
-	for(int i = 0; i < 2; i++ )
-		inter.info4[i] = 0xb0;
+	////info4
+	//for(int i = 0; i < 2; i++ )
+	//	inter.info4[i] = 0xb0;
 
-	//info5
-	for( int i = 0; i < 2; i++ )
-		inter.info5[i] = 0xc0;
-	
-	msghead.msgLen = sizeof(stMsgInter);
-	unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
+	////info5
+	//for( int i = 0; i < 2; i++ )
+	//	inter.info5[i] = 0xc0;
+	//
+	//msghead.msgLen = sizeof(stMsgInter);
+	//unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
 
-	memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
-	m_pcurrent += sizeof(T_UNIT_HEAD);
-	
-	memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
-	m_pcurrent += sizeof(T_MESSAGE_HEAD);
+	//memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
+	//m_pcurrent += sizeof(T_UNIT_HEAD);
+	//
+	//memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
+	//m_pcurrent += sizeof(T_MESSAGE_HEAD);
 
-	memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
-	m_pcurrent += sizeof(stMsgInter);
+	//memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
+	//m_pcurrent += sizeof(stMsgInter);
 
-	printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
+	//printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
 }
+
+#define toBig32(val) CUtility::LetoBe32(val)
+//#define toBig64(val) CUtility::LetoBe64(val)
+//#define toBig64(val) CUtility::BetoLe64(val)
+
+#define toBig16(val) CUtility::LetoBe16(val)
+//#define toLittle64(val) CUtility::BetoLe64(val)
 
 void CPackUtility::pushZC2CreateConnect(bool bcreate)
 {
-	updateIdxSt();
+	//updateIdxSt();
+	PLAT_UBYTE pArray[1024*8];
+	memset(pArray, 0, 1024*8);
+	PLAT_UBYTE *ptmpH = pArray;
 
-	
 	T_UNIT_HEAD     unithead;
 	T_MESSAGE_HEAD  msghead;
 
 	//01 001011, 0xaa, 0x00,0x00
-	unithead.unitId = 0x4baa0000;
-	unithead.unitSize = 0;
+	unithead.unitId = toBig32(0x4baa0000);
+	unithead.unitSize = toBig32(0);
 
-	msghead.sequenceNum = 2;
-	msghead.timeStamp = 2;
-	msghead.SID = g_sid;
-	msghead.DID = g_sid;
-	msghead.msgType = g_msgType; //0xff000001
-    msghead.msgLen = 0;
+	msghead.sequenceNum = toBig32(2);
+	msghead.timeStamp = CUtility::LetoBe64((long long) 2) ;//toBig64(2);
+	msghead.SID = toBig32(g_sid);
+	msghead.DID = toBig32(g_sid);
+	msghead.msgType = toBig32(g_msgType); //0xff000001
+    msghead.msgLen = toBig32(0);
 	
 	typedef struct _msgInter
 	{
@@ -370,143 +386,157 @@ void CPackUtility::pushZC2CreateConnect(bool bcreate)
 	stMsgInter inter;
 	inter.info1 = bcreate ? 0x10 : 0x11;
 	inter.info2 = 0;
-	inter.info3 = g_sid;
-	inter.info4 = g_sid;
-	inter.info5 = 0;
-	inter.info6 = 0;
+	inter.info3 =  toBig32(g_sid);
+	inter.info4 =  toBig32(g_sid);
+	inter.info5 =  toBig16(0);
+	inter.info6 =  toBig16(0);
 	
-	msghead.msgLen = sizeof(stMsgInter);
+	msghead.msgLen =  sizeof(stMsgInter);
 	unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
 
-	memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
-	m_pcurrent += sizeof(T_UNIT_HEAD);
+	printf( "msghead len = %d, unithead size = %d\n",
+		msghead.msgLen, unithead.unitSize);
+
+	msghead.msgLen = toBig32(msghead.msgLen);
+	unithead.unitSize  = toBig32(unithead.unitSize );
+
+	printf( "msghead len = %0x, unithead size = %0x, in memory\n",
+		msghead.msgLen, unithead.unitSize );
+
+
+	memcpy(ptmpH, &unithead, sizeof(T_UNIT_HEAD));
+	ptmpH += sizeof(T_UNIT_HEAD);
 	
-	memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
-	m_pcurrent += sizeof(T_MESSAGE_HEAD);
+	memcpy(ptmpH, &msghead, sizeof(T_MESSAGE_HEAD));
+	ptmpH += sizeof(T_MESSAGE_HEAD);
 
-	memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
-	m_pcurrent += sizeof(stMsgInter);
+	memcpy(ptmpH, &inter, sizeof(stMsgInter));
+	ptmpH += sizeof(stMsgInter);
 
-	printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
+	CUtility::pushBackPack(m_phead,pArray); 
 }
 
 
 void CPackUtility::pushZC2CC_RoutinMsg()
 {
-	updateIdxSt();	
-	
-	T_UNIT_HEAD     unithead;
-	T_MESSAGE_HEAD  msghead;
-	
-	unithead.unitId = 0x01;
-	unithead.unitSize = 0;
-	
-	msghead.sequenceNum = 2;
-	msghead.timeStamp = 2;
-	msghead.SID = g_sid;
-	msghead.DID = g_sid;
-	msghead.msgType = g_msgType;
-    msghead.msgLen = 0;
-	
-	typedef struct _msgInter
-	{
-		PLAT_UINT32 info1[14];
-		PLAT_UINT8  info2[9];
-		PLAT_UINT32 info3;
-		PLAT_UINT8  info4[2];
-		PLAT_UINT32 info5[2];
-	} stMsgInter;
-	
-	stMsgInter inter;
-	inter.info1[0] = msghead.DID;
-	inter.info1[1] = msghead.SID;
-	inter.info1[2] = msghead.msgType;
-	inter.info1[3] = sizeof(stMsgInter ) - 4 * sizeof(PLAT_UINT32);
-	
-	int i = 0;
-	//info1
-	for( i = 4; i < 14; i++ )
-		inter.info1[i] = 0x01;
-	
-	//change special value
-	inter.info1[5] = 0x02;
-	inter.info1[6] = 0x10;
-	
-	//info2
-	for( i = 0; i < 9; i++ )
-		inter.info2[i] = 0xa0;
-	
-	inter.info2[0] = 0xAA;
-	inter.info2[4] = 0x8;
-	
-	//info3
-	inter.info3 = 0x11;
-	
-	//info4
-	for(i = 0; i < 2; i++ )
-		inter.info4[i] = 0xb0;
-	
-	//info5
-	for( i = 0; i < 2; i++ )
-		inter.info5[i] = 0xc0;
-	
-	msghead.msgLen = sizeof(stMsgInter);
-	unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
-	
-	memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
-	m_pcurrent += sizeof(T_UNIT_HEAD);
-	
-	memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
-	m_pcurrent += sizeof(T_MESSAGE_HEAD);
-	
-	memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
-	m_pcurrent += sizeof(stMsgInter);
-	
-	printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
+	//updateIdxSt();	
+	//
+	//T_UNIT_HEAD     unithead;
+	//T_MESSAGE_HEAD  msghead;
+	//
+	////01 001011, 0xaa, 0x00,0x00
+	//unithead.unitId = toBig32(0x01);
+	//unithead.unitSize = toBig32(0);
+
+	//msghead.sequenceNum = toBig32(2);
+	//msghead.timeStamp = toBig64(2);
+	//msghead.SID = toBig32(g_sid);
+	//msghead.DID = toBig32(g_sid);
+	//msghead.msgType = toBig32(g_msgType); //0xff000001
+ //   msghead.msgLen = toBig32(0);
+	//
+	//typedef struct _msgInter
+	//{
+	//	PLAT_UINT32 info1[14];
+	//	PLAT_UINT8  info2[9];
+	//	PLAT_UINT32 info3;
+	//	PLAT_UINT8  info4[2];
+	//	PLAT_UINT32 info5[2];
+	//} stMsgInter;
+	//
+	//stMsgInter inter;
+	//inter.info1[0] = toBig32(msghead.DID);
+	//inter.info1[1] = toBig32(msghead.SID);
+	//inter.info1[2] = toBig32(msghead.msgType);
+	//inter.info1[3] = toBig32(sizeof(stMsgInter ) - 4 * sizeof(PLAT_UINT32));
+	//
+	//int i = 0;
+	////info1
+	//for( i = 4; i < 14; i++ )
+	//	inter.info1[i] = toBig32(0x01);
+	//
+	////change special value
+	//inter.info1[5] = toBig32(0x02);
+	//inter.info1[6] = toBig32(0x10);
+	//
+	////info2
+	//for( i = 0; i < 9; i++ )
+	//	inter.info2[i] = 0xa0;
+	//
+	//inter.info2[0] = 0xAA;
+	//inter.info2[4] = 0x8;
+	//
+	////info3
+	//inter.info3 = toBig32(0x11);
+	//
+	////info4
+	//for(i = 0; i < 2; i++ )
+	//	inter.info4[i] = 0xb0;
+	//
+	////info5
+	//for( i = 0; i < 2; i++ )
+	//	inter.info5[i] = toBig32(0xc0);
+	//
+	//msghead.msgLen = sizeof(stMsgInter);
+	//unithead.unitSize = msghead.msgLen + sizeof(T_MESSAGE_HEAD);
+	//
+	//memcpy(m_pcurrent, &unithead, sizeof(T_UNIT_HEAD));
+	//m_pcurrent += sizeof(T_UNIT_HEAD);
+	//
+	//memcpy(m_pcurrent, &msghead, sizeof(T_MESSAGE_HEAD));
+	//m_pcurrent += sizeof(T_MESSAGE_HEAD);
+	//
+	//memcpy(m_pcurrent, &inter, sizeof(stMsgInter));
+	//m_pcurrent += sizeof(stMsgInter);
+	//
+	//printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
+
+	//msghead.msgLen = toBig32(msghead.msgLen);
+	//unithead.unitSize  = toBig32(unithead.unitSize );
+
+	//printf( "msghead len = %0x, unithead size = %0x, in memory\n",
+	//	msghead.msgLen, unithead.unitSize );
 
 }
 
 void CPackUtility::pushZC2CC_TrackMsg()
 {
-	updateIdxSt();
+	//updateIdxSt();
 
 }
 
 void CPackUtility::pushZC2CC_SpeedRstMsg() //speed restrict
 {
-	updateIdxSt();
+	//updateIdxSt();
 
 }
 
 void CPackUtility::pushCC2ZC_2ATSTrasMsg()
 {
-	updateIdxSt();
+	//updateIdxSt();
 }
 
 void CPackUtility::pushZC2CC_fromATSTrasMsg()
 {
-	updateIdxSt();
+	//updateIdxSt();
 }
 
 CPackUtility::CPackUtility(PLAT_UBYTE* p)
 {
 	m_phead = p;
-	m_pcurrent = p + sizeof(T_DATA_INDEX);
-	memset(&m_index, 0x00, sizeof(T_DATA_INDEX));
-	m_index.platformHealth =1;
-	m_index.platformStatus =1;
-	m_index.regionUnitNum = 0;
-	m_seqnum = -1;
+
+
+	CUtility::initBigPackIdx(p);
 }
 
 CPackUtility::~CPackUtility()
 {
-   finished();
+  // finished();
 }
 
 void CPackUtility::finished()
 {
-	memcpy(m_phead, &m_index, sizeof(T_DATA_INDEX));	
+	//memcpy(m_phead, &m_index, sizeof(T_DATA_INDEX));	
 }
 
 enum packType
@@ -520,24 +550,24 @@ enum packType
 
 void CPackUtility::pushPack(int type)
 {
-	updateIdxSt();
+	//updateIdxSt();
 
-	switch(type)
-	{
-	case zc2Cir:
-		break;
-	case zc2Broder:
-		break;
-	case zc2Atp:
-		break;
-	case zc2Ato:
-		pushPackZc2Ato();
-		break;
-	case zc2Ci:
-		break;
-	default:
-		break;
-	}
+	//switch(type)
+	//{
+	//case zc2Cir:
+	//	break;
+	//case zc2Broder:
+	//	break;
+	//case zc2Atp:
+	//	break;
+	//case zc2Ato:
+	//	pushPackZc2Ato();
+	//	break;
+	//case zc2Ci:
+	//	break;
+	//default:
+	//	break;
+	//}
 }
 
 void CPackUtility::pushPackZc2Atp()
@@ -546,29 +576,30 @@ void CPackUtility::pushPackZc2Atp()
 
 void CPackUtility::pushPackZc2Ato()
 {
-	T_UNIT_HEAD     unithead;
-	T_MESSAGE_HEAD  messagehead;
-	int i = 0;
-	unithead.unitId = ZC_ID_MESSAGEOUT;
-	unithead.unitSize = 2 + sizeof(messagehead);
-	
-	messagehead.sequenceNum =1;			//临时
-	messagehead.timeStamp =0;			//临时
-	messagehead.SID =ZC5;
-	messagehead.DID =ZC5;
-	messagehead.msgType =MT_ZC_TO_CC;
-	messagehead.msgLen = 2;
+	//return;
+	//T_UNIT_HEAD     unithead;
+	//T_MESSAGE_HEAD  messagehead;
+	//int i = 0;
+	//unithead.unitId = ZC_ID_MESSAGEOUT;
+	//unithead.unitSize = 2 + sizeof(messagehead);
+	//
+	//messagehead.sequenceNum =1;			//临时
+	//messagehead.timeStamp =0;			//临时
+	//messagehead.SID =ZC5;
+	//messagehead.DID =ZC5;
+	//messagehead.msgType =MT_ZC_TO_CC;
+	//messagehead.msgLen = 2;
 
-	memcpy(m_pcurrent, &unithead, sizeof(unithead));
-	m_pcurrent +=sizeof(unithead);
-	memcpy(m_pcurrent, &messagehead, sizeof(messagehead));
-	m_pcurrent +=sizeof(messagehead);
+	//memcpy(m_pcurrent, &unithead, sizeof(unithead));
+	//m_pcurrent +=sizeof(unithead);
+	//memcpy(m_pcurrent, &messagehead, sizeof(messagehead));
+	//m_pcurrent +=sizeof(messagehead);
 
-	char m[2] = {'a','b'};
-	memcpy(m_pcurrent, &m[0], sizeof(PLAT_UBYTE));
-	++m_pcurrent;
-	memcpy(m_pcurrent, &m[1], sizeof(PLAT_UBYTE));
-	//memcpy(m_pcurrent, unithead + sizeof(PLAT_UINT32) * 2, 2);
+	//char m[2] = {'a','b'};
+	//memcpy(m_pcurrent, &m[0], sizeof(PLAT_UBYTE));
+	//++m_pcurrent;
+	//memcpy(m_pcurrent, &m[1], sizeof(PLAT_UBYTE));
+	////memcpy(m_pcurrent, unithead + sizeof(PLAT_UINT32) * 2, 2);
 }
 
 void createPacakge()
@@ -588,5 +619,5 @@ void createPacakge()
 	packUtil.pushZC2CreateConnect(false);
 	//packUtil.ZC2CreateConnect(false);
 	
-	packUtil.finished();
+	//packUtil.finished();
 }

@@ -57,6 +57,9 @@
       <AdditionalDependencies>
       </AdditionalDependencies>
     </Lib>
+    <PostBuildEvent>
+      <Command>copy $(LocalDebuggerCommand)  ..\..\testclient\testclient</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -83,6 +86,7 @@
     <ClCompile Include="cutility.cpp" />
     <ClCompile Include="packetprocess.cpp" />
     <ClCompile Include="platform.cpp" />
+    <ClCompile Include="platforminterface.cpp" />
     <ClCompile Include="wintimer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -93,6 +97,7 @@
     <ClInclude Include="packetprocess.h" />
     <ClInclude Include="platform.h" />
     <ClInclude Include="platformhead.h" />
+    <ClInclude Include="platforminterface.h" />
     <ClInclude Include="wintimer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

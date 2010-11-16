@@ -60,6 +60,9 @@
     <ClInclude Include="..\..\platformlib\platformlib\platformhead.h">
       <Filter>platfom</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\platformlib\platformlib\platforminterface.h">
+      <Filter>platfom</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="testclient.cpp">
