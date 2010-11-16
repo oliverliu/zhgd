@@ -1,7 +1,7 @@
 #ifndef ZCDataStruct
 #define ZCDataStruct
 
-#include "../platform/platformhead.h"
+#include "platformhead.h"
 
 //#include "platformlib\platformhead.h"
 #pragma pack(1)					/*设定为1字节对齐 */

@@ -102,5 +102,5 @@ typedef     unsigned long	        PLAT_UINT32;		/* long ,  unsigned */
 
 #endif
 
-extern  PLAT_UBYTE APP_READ_ADDR[SIZE];
-extern  PLAT_UBYTE APP_WRITE_ADDR[SIZE];
+extern  PLAT_UBYTE APP_READ_ADDR[NETSIZE];
+extern  PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];

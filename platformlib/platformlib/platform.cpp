@@ -47,6 +47,9 @@ CAppInterface::CAppInterface()
 	writecount =0;									/*记录平台的写周期*/
 	m_pzc = new CZc();
 	m_pei = new packetprocess();
+
+	m_fpFromTerminalLog = NULL;
+	m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
 }
 
 CAppInterface::~CAppInterface()
@@ -61,6 +64,8 @@ CAppInterface::~CAppInterface()
 		delete m_pei;
 		m_pei = NULL;
 	}
+	if(m_fpFromTerminalLog)
+		fclose(m_fpFromTerminalLog);
 
 }
 
@@ -103,8 +108,9 @@ void CAppInterface::OutputUint(PLAT_UINT8* uout,int len)
 // Data:	2010/10/09
 //******************************************************************************
 
-PLAT_UBYTE APP_READ_ADDR[SIZE];
-PLAT_UBYTE APP_WRITE_ADDR[SIZE];
+PLAT_UBYTE APP_READ_ADDR[NETSIZE];
+PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];
+const char * g_fromTerminalLog = "fromTerminalLog.txt";
 
 const char * s_host = "192.168.20.100";
 
@@ -151,6 +157,9 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
 
 PLAT_INT32 CAppInterface::AppWrite()
 {
+	fprintf(m_fpFromTerminalLog, "Write data: \n");
+	CUtility::outputPackage(APP_WRITE_ADDR,m_fpFromTerminalLog);
+
 	int j;
 	writecount ++;
     m_pei->pPlataddr = platBuf;
@@ -190,6 +199,7 @@ PLAT_INT32 CAppInterface::AppWrite()
 		}
 		sprintf(dst,"%08x",dstID);
 		
+		procMsgOut(uintBuf);
 		procConnectControl(uintBuf);
 		procBroadMsg(uintBuf);
 		procInputAppStatus(uintBuf);
@@ -343,6 +353,18 @@ void CAppInterface::procInputAppStatus(PLAT_UBYTE* p)
 	}
 }
 
+
+void CAppInterface::procMsgOut(PLAT_UBYTE* p)
+{
+	CLittlePack parser(srcID, p);
+	if (parser.isMsgOut())
+	{
+		CUtility::setBitsVal(parser.getUnitID(), 24,29, 5);//0000110
+		//update connect control
+	}
+}
+
+
 void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 {
 	CLittlePack parser(srcID, p);
@@ -430,6 +452,9 @@ PLAT_UINT32 getPlatformID( PLAT_UINT32 srcid)
 {
 	return (srcid&0x1FFFFFFF)|0xC0000000;     
 }
+
+
+
 
 PLAT_INT32 CAppInterface::AppRead()
 {	
@@ -577,6 +602,10 @@ PLAT_INT32 CAppInterface::AppRead()
 	if(app_display() ==1)
 		printf("RECV DATA END------------------------------RECV DATA END \n");
 
+
+	fprintf(m_fpFromTerminalLog, "Read data: \n");
+	CUtility::outputPackage(APP_READ_ADDR,m_fpFromTerminalLog);
+	CUtility::outputPackage(platBuf,m_fpFromTerminalLog);
 	return 0;
 }
 

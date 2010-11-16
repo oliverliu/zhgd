@@ -13,8 +13,12 @@
 
 #pragma pack(1)																		/*设定为1字节对齐*/
 
+#define _USING_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
+
 class 	CZc;
 class  packetprocess;
+
+extern const char * g_fromTerminalLog;
 
 class CAppInterface 
 {
@@ -30,6 +34,7 @@ public:
 
 private:
 	void			procConnectState(PLAT_UBYTE* p);
+	void			procMsgOut(PLAT_UBYTE* p);
 	void			procConnectControl(PLAT_UBYTE* p);
 	void			procBroadMsg(PLAT_UBYTE* p);
 	void			procInputAppStatus(PLAT_UBYTE* p);
@@ -65,5 +70,8 @@ private:
 	PLAT_UINT64   writecount;														/*记录平台的写周期个数*/
 
 	CZc*      m_pzc;
+
+	FILE	*m_fpFromTerminalLog;
+//	fprintf(fp, "READ: \n");
 };
 #endif

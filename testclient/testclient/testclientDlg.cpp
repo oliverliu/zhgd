@@ -13,9 +13,6 @@
 
 #include "zc\ZCDataStruct.h"
 
-extern  PLAT_UBYTE APP_READ_ADDR[SIZE];
-extern  PLAT_UBYTE APP_WRITE_ADDR[SIZE];
-
 #define ZC5		0x20000005 
 #define CC5    0x00000FF5        //暂定ZC发送给CC5的数据包的目的地ID
 
@@ -170,9 +167,9 @@ HCURSOR CTestClientDlg::OnQueryDragIcon()
 
 
 
-#include "platform\platform.h"
-#include "platform\platformhead.h"
-#include "platform\cutility.h"
+#include "platform.h"
+#include "platformhead.h"
+#include "cutility.h"
 
 static void outputPackage(const PLAT_UBYTE * buf, FILE* fp)
 {
@@ -182,7 +179,7 @@ static void outputPackage(const PLAT_UBYTE * buf, FILE* fp)
 	{
 		PLAT_UBYTE * unit = CUtility::getUnitHead(buf, i);
 		fprintf(fp, "NO.%2d package: unitId = %d, unitSize = %d, data:\n", 
-			i, CUtility::getLittlePackUID(unit), CUtility::getLittlePackUSize(unit));
+			i, CUtility::getLittlePackUID(unit), CUtility::getLittlePackDataSize(unit));
 		PLAT_UINT32 size = CUtility::getLittlePackSize(unit);
 		for(int j = 0;j < size; j++)
 		{
@@ -357,7 +354,7 @@ void CPackUtility::pushZC2CreateConnect(bool bcreate)
 	msghead.timeStamp = 2;
 	msghead.SID = g_sid;
 	msghead.DID = g_sid;
-	msghead.msgType = g_msgType;
+	msghead.msgType = g_msgType; //0xff000001
     msghead.msgLen = 0;
 	
 	typedef struct _msgInter

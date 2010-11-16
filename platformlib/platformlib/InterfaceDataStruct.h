@@ -27,7 +27,7 @@ typedef struct
 {
 	PLAT_UINT32  unitId;		/*单元ID*/       
 	PLAT_UINT32  unitSize;		/*单元数据大小*/
-	PLAT_BYTE*	 unitData;
+	PLAT_BYTE*	 unitData;     // the address has limited, it must be follow unitSize in memory
 }T_UNIT;
 
 
@@ -41,7 +41,7 @@ typedef struct
 	PLAT_UINT32 SID;			/*通信报文源地址*/
 	PLAT_UINT32 DID;			/*通信报文目的地址*/
 	PLAT_UINT32 msgType;		/*通信报文信息类型*/
-	PLAT_UINT16 msgLen;			/*通信报文数据大小*/
+	PLAT_UINT32 msgLen;			/*通信报文数据大小*/
 	
 }T_MESSAGE_HEAD;
 

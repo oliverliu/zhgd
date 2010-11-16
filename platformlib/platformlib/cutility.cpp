@@ -40,7 +40,59 @@
 // void pDebug(const char* format, ...)   { return pmesg(2, format, ...); }
 // void pBig(const char* format, ...)     { return pmesg(5, format, ...); }
 
-#include <math.h>
+//#include <math.h>
+
+#ifdef _PLAT_WIN
+
+#endif
+
+#ifdef _PLAT_LIUNX
+#include <arpa/inet.h>
+#endif
+
+static bool using_big_endian()
+{
+#ifdef _USING_BIG_ENDIAN
+	return true;
+#else
+	return false;
+#endif
+}
+
+PLAT_UINT16 ByteSwap16 (PLAT_UINT16 nValue)
+{
+   return (((nValue>> 8)) | (nValue << 8));
+}
+
+PLAT_UINT32 ByteSwap32 (PLAT_UINT32 nLongNumber)
+{
+   return (((nLongNumber&0x000000FF)<<24)+((nLongNumber&0x0000FF00)<<8)+
+   ((nLongNumber&0x00FF0000)>>8)+((nLongNumber&0xFF000000)>>24));
+}
+
+PLAT_UINT64 ByteSwap64 (PLAT_UINT64 nLongNumber)
+{
+	return (( (PLAT_UINT64) (ByteSwap32 ((PLAT_UINT32) ((nLongNumber << 32) >>32))) <<32) |
+		ByteSwap32 ((PLAT_UINT32)(nLongNumber >> 32)) );
+}
+
+PLAT_UINT32 CUtility::BetoLe32(const PLAT_UINT32 val )
+{
+	return using_big_endian ? ByteSwap32(val) : val;
+}
+PLAT_UINT16 CUtility::BetoLe16(const PLAT_UINT16 val)
+{
+	return using_big_endian ? ByteSwap16(val) : val;
+}
+PLAT_UINT32 CUtility::LetoBe32(const PLAT_UINT32 val)
+{
+	return using_big_endian ? ByteSwap32(val) : val;
+}
+PLAT_UINT16 CUtility::LetoBe16(const PLAT_UINT16 val)
+{
+	return using_big_endian ? ByteSwap16(val) : val;
+}
+
 bool CUtility::isBitSet(PLAT_UINT32 val, PLAT_UINT32 bit)
 {
 	if ( bit < 0 || bit >= 32)
@@ -56,15 +108,35 @@ PLAT_UINT32 CUtility::getBitsVal(const PLAT_UINT32 val, PLAT_UINT8 start, PLAT_U
 	PLAT_UINT8 little = start > end ? end : start;
 	PLAT_UINT8 big    = start < end ? end : start;
 
-	int tmp = (int) pow((float)2, big - little + 1) - 1;
+	//int tmp = (int) pow((float)2, big - little + 1) - 1;
+	int tmp = (int) ((2 << (big - little)) - 1);
 	return  (( tmp << little ) & val ) >> little;
 }
 
 PLAT_UINT32 CUtility::setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_UINT8 end, PLAT_UINT32 val)
 {	
-	char small = start >= end ? end : start;
+	PLAT_UINT8 small = start >= end ? end : start;
 	return dst | (val << small);
 }
+
+void CUtility::outputPackage(const PLAT_UBYTE * buf, FILE* fp)
+{
+	PLAT_UINT32 count = CUtility::getUnitCounts(buf);
+	fprintf(fp, "package has %d unit\n", count);
+	for (int i = 0; i < count; i++)
+	{
+		PLAT_UBYTE * unit = CUtility::getUnitHead(buf, i);
+		fprintf(fp, "NO.%2d package: unitId = %d, unitSize = %d, data:\n", 
+			i, CUtility::getLittlePackUID(unit), CUtility::getLittlePackDataSize(unit));
+		PLAT_UINT32 size = CUtility::getLittlePackSize(unit);
+		for(int j = 0;j < size; j++)
+		{
+			fprintf(fp, "%02x  ", unit[j]);
+		}
+		fprintf(fp, "\n");
+	}
+}
+
 
 void CUtility::pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack)
 {
@@ -115,16 +187,6 @@ PLAT_UINT32 CUtility::getLittlePackUID(const PLAT_UBYTE * littlepack)
 	return ret;
 }
 
-PLAT_UINT32 CUtility::getLittlePackUSize(const PLAT_UBYTE * littlepack)
-{
-	PLAT_UINT32 ret = 0;
-	
-	T_UNIT_HEAD unitHead;
-	memcpy(&unitHead, littlepack , sizeof(T_UNIT_HEAD) );
-	ret = unitHead.unitSize;
-	return ret;
-}
-
 PLAT_UINT32 CUtility::getLittlePackSID(const PLAT_UBYTE * littlepack)
 {
 	PLAT_UINT32 ret = 0;
@@ -147,12 +209,20 @@ PLAT_UINT32 CUtility::getLittlePackDID(const PLAT_UBYTE * littlepack)
 	return ret;
 }
 
+PLAT_UINT32 CUtility::getLittlePackDataSize(const PLAT_UBYTE * littlepack)
+{
+	PLAT_UINT32 ret = 0;
+	
+	T_UNIT_HEAD unitHead;
+	memcpy(&unitHead, littlepack , sizeof(T_UNIT_HEAD) );
+	ret = BetoLe32(unitHead.unitSize) * sizeof(PLAT_UBYTE);
+
+	return ret;
+}
 
 PLAT_UINT32 CUtility::getLittlePackSize(const PLAT_UBYTE* littlepack)
 {
-	T_UNIT_HEAD unitHeadtmp;
-	memcpy(&unitHeadtmp, littlepack, sizeof(T_UNIT_HEAD));
-	return sizeof(T_UNIT_HEAD) + unitHeadtmp.unitSize * sizeof(PLAT_UBYTE);
+	return getLittlePackDataSize(littlepack) + sizeof(T_UNIT_HEAD);
 }
 
 bool CUtility::updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littlepackDst)
@@ -190,14 +260,14 @@ PLAT_UINT32 CUtility::getUnitCounts(const PLAT_UBYTE* bigPackHead)
 {
 	T_DATA_INDEX idx;
 	memcpy(&idx, bigPackHead, sizeof(T_DATA_INDEX));
-	return idx.regionUnitNum;
+	return BetoLe32(idx.regionUnitNum);
 }
 
 PLAT_UBYTE* CUtility::getUnitHead(const PLAT_UBYTE* bigPackHead, PLAT_UINT32 indx)
 {
 	T_DATA_INDEX idx;
 	memcpy(&idx, bigPackHead, sizeof(T_DATA_INDEX));
-	return  (PLAT_UBYTE* )bigPackHead + idx.unitAddrOffset[indx] ;
+	return  (PLAT_UBYTE* )bigPackHead +  BetoLe32(idx.unitAddrOffset[indx]) ;
 }
 
 
@@ -237,7 +307,7 @@ void CBigpackParser::pushPack(T_UNIT*  ppack)
 	m_index.unitAddrOffset[m_seqnum] = m_pcurrent - m_phead;
 	m_index.regionUnitNum =  m_seqnum + 1;
 
-	PLAT_UINT32 len = ppack->unitSize;
+	PLAT_UINT32 len = CUtility::BetoLe32(ppack->unitSize);
 	len += sizeof(T_UNIT_HEAD);
 
 	memcpy(m_pcurrent, ppack, len);
@@ -290,30 +360,30 @@ void CBigpackParser::pushPackZc2Atp()
 
 void CBigpackParser::pushPackZc2Ato()
 {
-	#define MT_ZC_TO_CC 0x00014101
+	//#define MT_ZC_TO_CC 0x00014101
 
-	T_UNIT_HEAD     unithead;
-	T_MESSAGE_HEAD  messagehead;
-	int i = 0;
-	unithead.unitId = ZC_ID_MESSAGEOUT;
-	unithead.unitSize = 2 + sizeof(messagehead);
-	
-	messagehead.sequenceNum =1;			//临时
-	messagehead.timeStamp =0;			//临时
-	messagehead.SID = ZC1;
-	messagehead.DID = ZC1;
-	messagehead.msgType = MT_ZC_TO_CC;
-	messagehead.msgLen = 2;
+	//T_UNIT_HEAD     unithead;
+	//T_MESSAGE_HEAD  messagehead;
+	//int i = 0;
+	//unithead.unitId = ZC_ID_MESSAGEOUT;
+	//unithead.unitSize = 2 + sizeof(messagehead);
+	//
+	//messagehead.sequenceNum =1;			//临时
+	//messagehead.timeStamp =0;			//临时
+	//messagehead.SID = ZC1;
+	//messagehead.DID = ZC1;
+	//messagehead.msgType = MT_ZC_TO_CC;
+	//messagehead.msgLen = 2;
 
-	memcpy(m_pcurrent, &unithead, sizeof(unithead));
-	m_pcurrent +=sizeof(unithead);
-	memcpy(m_pcurrent, &messagehead, sizeof(messagehead));
-	m_pcurrent +=sizeof(messagehead);
+	//memcpy(m_pcurrent, &unithead, sizeof(unithead));
+	//m_pcurrent +=sizeof(unithead);
+	//memcpy(m_pcurrent, &messagehead, sizeof(messagehead));
+	//m_pcurrent +=sizeof(messagehead);
 
-	char m[2] = {'a','b'};
-	memcpy(m_pcurrent, &m[0], sizeof(PLAT_UBYTE));
-	++m_pcurrent;
-	memcpy(m_pcurrent, &m[1], sizeof(PLAT_UBYTE));
+	//char m[2] = {'a','b'};
+	//memcpy(m_pcurrent, &m[0], sizeof(PLAT_UBYTE));
+	//++m_pcurrent;
+	//memcpy(m_pcurrent, &m[1], sizeof(PLAT_UBYTE));
 }
 
 //////////////////////////////////////////////////////
@@ -507,6 +577,12 @@ PLAT_UINT32 CLittlePack::dataType() const
 {
 	return CUtility::getBitsVal(m_header.unitId, 24,29)  ;
 	//return m_header.unitId & 0x3F000000; 
+}
+
+//1010
+bool CLittlePack::isMsgOut() const
+{
+	return dataType() == 0xa ? true : false;
 }
 
 // 1011

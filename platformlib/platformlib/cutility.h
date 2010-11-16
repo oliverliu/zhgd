@@ -16,14 +16,20 @@ public:
 	static	PLAT_UINT32 getBitsVal(const PLAT_UINT32 val, PLAT_UINT8 start, PLAT_UINT8 end);
 	static  PLAT_UINT32 setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_UINT8 end, PLAT_UINT32 val);
 
+	static void outputPackage(const PLAT_UBYTE * buf, FILE* fp);
+	static PLAT_UINT32 BetoLe32(const PLAT_UINT32 val );
+	static PLAT_UINT16 BetoLe16(const PLAT_UINT16 val);
+	static PLAT_UINT32 LetoBe32(const PLAT_UINT32 val);
+	static PLAT_UINT16 LetoBe16(const PLAT_UINT16 val);
+
 	//
 	static void pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack);
 
 	static PLAT_UINT32 getLittlePackUID(const PLAT_UBYTE * littlepack);
-	static PLAT_UINT32 getLittlePackUSize(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackSID(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackDID(const PLAT_UBYTE * littlepack);
-	static PLAT_UINT32 getLittlePackSize(const PLAT_UBYTE* littlepack);
+	static PLAT_UINT32 getLittlePackDataSize(const PLAT_UBYTE * littlepack);
+	static PLAT_UINT32 getLittlePackSize(const PLAT_UBYTE* littlepack);//including head
 	static bool updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littlepackDst);
 
 	//Big package
@@ -45,6 +51,8 @@ public:
 // In construct function, please give big package start address.
 // In destruct function or finish function will update Data index area
 // The class will change the data of address p and subsequent area.
+
+//this is not used for now. 20101116 by liuning
 class CBigpackParser
 {
 public:
@@ -54,7 +62,7 @@ public:
 
 	//sequence push package to build a package
 	void pushPack(int type);
-	void pushPack(T_UNIT*  ppack);
+	void pushPack(T_UNIT*  littlepack);
 
 	//at end push package at end of big package
 
@@ -112,6 +120,7 @@ public:
 	CLittlePack(const PLAT_UINT32 fromID, const PLAT_UBYTE* parentHead, const PLAT_UINT32 idx);
 
 	bool isConnectControl() const;
+	bool isMsgOut() const;
 	bool isInputAppStatus() const;
 	bool isBroad() const;
 	bool isConnectState() const;
