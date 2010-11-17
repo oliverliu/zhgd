@@ -21,7 +21,8 @@
 #define ZC5		0x20000005 
 #define CC5    0x00000FF5        //暂定ZC发送给CC5的数据包的目的地ID
 
-const PLAT_UINT32 g_sid = 0xc1000000; //11,a1,b1
+//const PLAT_UINT32 g_sid = 0xc1000000; //11,a1,b1
+const PLAT_UINT32 g_sid = 0x21000002; //11,a1,b1
 const PLAT_UINT32 g_did = 0x21000000;
 const PLAT_UINT32 g_msgType = 0xff000001;
 
@@ -174,28 +175,34 @@ HCURSOR CTestClientDlg::OnQueryDragIcon()
 
 
 
-static void outputPackage(const PLAT_UBYTE * buf, FILE* fp)
-{
-	PLAT_UINT32 count = CUtility::getUnitCounts(buf);
-	fprintf(fp, "package has %d unit\n", count);
-	for (int i = 0; i < count; i++)
-	{
-		PLAT_UBYTE * unit = CUtility::getUnitHead(buf, i);
-		fprintf(fp, "NO.%2d package: unitId = %d, unitSize = %d, data:\n", 
-			i, CUtility::getLittlePackUID(unit), CUtility::getLittlePackDataSize(unit));
-		PLAT_UINT32 size = CUtility::getLittlePackSize(unit);
-		for(int j = 0;j < size; j++)
-		{
-			fprintf(fp, "%02x  ", unit[j]);
-		}
-		fprintf(fp, "\n");
-	}
-}
-
+//static void outputPackage(const PLAT_UBYTE * _buf, FILE* fp)
+//{
+//    PLAT_UBYTE * buf = (PLAT_UBYTE *) _buf;
+//    CUtility::swapBigpackage(buf, true);
+//	PLAT_UINT32 count = CUtility::getUnitCounts(buf);
+//	fprintf(fp, "little endian: package has %d unit\n", count);
+//	for (int i = 0; i < count; i++)
+//	{
+//		PLAT_UBYTE * unit = CUtility::getUnitHead(buf, i);
+//		fprintf(fp, "NO.%2d package: unitId = %d, unitSize = %d, data:\n", 
+//			i, CUtility::getLittlePackUID(unit), CUtility::getLittlePackDataSize(unit));
+//		PLAT_UINT32 size = CUtility::getLittlePackSize(unit);
+//		for(int j = 0;j < size; j++)
+//		{
+//			fprintf(fp, "%02x  ", unit[j]);
+//		}
+//		fprintf(fp, "\n");
+//	}
+//    CUtility::swapBigpackage(buf, false);
+//}
+//
 
 void createPacakge();
 
 CAppInterface app;
+
+PLAT_UBYTE APP_READ_ADDR_SWAP[NETSIZE];
+PLAT_UBYTE APP_WRITE_ADDR_SWAP[NETSIZE];
 
 void CTestClientDlg::OnBnClickedButton1()
 {
@@ -212,17 +219,28 @@ void CTestClientDlg::OnBnClickedButton1()
 	}
 	fprintf(fp, "\n\nTest NO.%d\n", i++);
 
+   
+
 	//app.AppRead();
 	ReadFormPlatform();
-	
-	fprintf(fp, "READ: \n");
-	outputPackage(APP_READ_ADDR,fp);
 
+    memset(APP_READ_ADDR_SWAP,0, NETSIZE);
+    memcpy(APP_READ_ADDR_SWAP, APP_READ_ADDR, NETSIZE);
+    if(CUtility::needSwap())
+        CUtility::bigPackToLE(APP_READ_ADDR_SWAP);
+    fprintf(fp, "READ: \n");
+	CUtility::outputPackage(APP_READ_ADDR_SWAP,fp);
+	
+	
 	//create a package
 	createPacakge();
 
+    memset(APP_WRITE_ADDR_SWAP,0, NETSIZE);
+    memcpy(APP_WRITE_ADDR_SWAP, APP_WRITE_ADDR, NETSIZE);
+    if(CUtility::needSwap())
+        CUtility::bigPackToLE(APP_WRITE_ADDR_SWAP);
 	fprintf(fp, "Write: \n");
-	outputPackage(APP_WRITE_ADDR, fp);
+	CUtility::outputPackage(APP_WRITE_ADDR_SWAP, fp);
 	//app.AppWrite();
 	WriteToPlatform();
 
@@ -345,12 +363,12 @@ void CPackUtility::pushCC2ZC_RoutineMsg()
 	//printf( "msghead len = %d, unithead size = %d\n", msghead.msgLen, unithead.unitSize);
 }
 
-#define toBig32(val) CUtility::LetoBe32(val)
-//#define toBig64(val) CUtility::LetoBe64(val)
-//#define toBig64(val) CUtility::BetoLe64(val)
-
-#define toBig16(val) CUtility::LetoBe16(val)
-//#define toLittle64(val) CUtility::BetoLe64(val)
+//#define toBig32(val) CUtility::ByteSwap32(val)
+//#define toBig64(val) CUtility::ByteSwap64(val)
+//#define toBig16(val) CUtility::ByteSwap16(val)
+#define toBig32(val) (val)
+#define toBig64(val) (val)
+#define toBig16(val) (val)
 
 void CPackUtility::pushZC2CreateConnect(bool bcreate)
 {
@@ -363,11 +381,11 @@ void CPackUtility::pushZC2CreateConnect(bool bcreate)
 	T_MESSAGE_HEAD  msghead;
 
 	//01 001011, 0xaa, 0x00,0x00
-	unithead.unitId = toBig32(0x4baa0000);
+	unithead.unitId = toBig32(0x4baa1234);
 	unithead.unitSize = toBig32(0);
 
 	msghead.sequenceNum = toBig32(2);
-	msghead.timeStamp = CUtility::LetoBe64((long long) 2) ;//toBig64(2);
+	msghead.timeStamp = toBig64((long long) 2) ;//toBig64(2);
 	msghead.SID = toBig32(g_sid);
 	msghead.DID = toBig32(g_sid);
 	msghead.msgType = toBig32(g_msgType); //0xff000001
@@ -618,6 +636,8 @@ void createPacakge()
 	packUtil.pushZC2CreateConnect(true);
 	packUtil.pushZC2CreateConnect(false);
 	//packUtil.ZC2CreateConnect(false);
-	
+
+	if(CUtility::needSwap())
+        CUtility::bigPackToBE(dstBuf);
 	//packUtil.finished();
 }

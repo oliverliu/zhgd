@@ -5,30 +5,76 @@ READ:
 package has 0 unit
 Write: 
 package has 2 unit
-NO. 0 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  10  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 1 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  11  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
 
 
 Test NO.1
 READ: 
-package has 6 unit
-NO. 0 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  10  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 1 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  11  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 2 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  10  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 3 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  11  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 4 package: unitId = 1176699135, unitSize = 1, data:
-46  23  00  ff  00  00  00  01  23  
-NO. 5 package: unitId = 1176502527, unitSize = 1, data:
-46  20  00  ff  00  00  00  01  20  
+package has 4 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 2 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 3 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
 Write: 
 package has 2 unit
-NO. 0 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  10  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
-NO. 1 package: unitId = 1269432320, unitSize = 42, data:
-4b  aa  00  00  00  00  00  2a  00  00  00  02  00  00  00  00  00  00  00  02  c1  00  00  00  c1  00  00  00  ff  00  00  01  00  00  00  0e  11  00  c1  00  00  00  c1  00  00  00  00  00  00  00  
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+
+
+Test NO.2
+READ: 
+package has 6 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 2 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 3 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 4 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 5 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+Write: 
+package has 2 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+
+
+Test NO.3
+READ: 
+package has 8 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 2 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 3 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 4 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 5 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 6 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 7 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+Write: 
+package has 2 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  

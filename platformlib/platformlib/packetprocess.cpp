@@ -50,7 +50,7 @@ void packetprocess::Decoder(PLAT_UINT8* uin)
 	//clear arrays data?
 
 	memcpy(&index, uin, sizeof(index));
-	len = CUtility::BetoLe32( index.regionUnitNum);										/*得到大数据包中单元的个数*/					
+	len = index.regionUnitNum;										/*得到大数据包中单元的个数*/					
 	if(len ==0)														/*若单元个数为0，返回不处理*/
 	{
 		printf("Data is NULL\n");
@@ -59,7 +59,7 @@ void packetprocess::Decoder(PLAT_UINT8* uin)
 
 	for(i =0; i <len; i++)
 	{
-		paddr = uin + CUtility::BetoLe32(index.unitAddrOffset[i]);							/*根据各单元的偏移量求单元首地址*/
+		paddr = uin + index.unitAddrOffset[i];							/*根据各单元的偏移量求单元首地址*/
 		memcpy(&id[i], paddr, sizeof(id[i]));						/*得到数据包中各单元的单元ID*/
 
         paddr +=sizeof(id[i]);                       

@@ -7,9 +7,8 @@
 //#include "packetprocess.h"
 #pragma pack(1)																		/*设定为1字节对齐*/
 
-// The data in memory that pointer point is big endian
-// The data in internal that IS NOT pointer suggest using little endian
-// The data in internal that IS pointer suggest using little endian
+// The output / input data for platform are big endian sequence
+// When enter our loop, transfer them to little endian and leave transfer them to big endian
 class CUtility
 {
 public:
@@ -20,17 +19,22 @@ public:
 	static  PLAT_UINT32 setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_UINT8 end, PLAT_UINT32 val);
 
 	static void outputPackage(const PLAT_UBYTE * buf, FILE* fp);
-	static PLAT_UINT32 BetoLe32(const PLAT_UINT32 val );
-	static PLAT_UINT16 BetoLe16(const PLAT_UINT16 val);
-	static PLAT_UINT64 BetoLe64(const PLAT_UINT64 val );
 
-	static PLAT_UINT32 LetoBe32(const PLAT_UINT32 val);
-	static PLAT_UINT16 LetoBe16(const PLAT_UINT16 val);
-	static PLAT_UINT64 LetoBe64(const PLAT_UINT64 val);
+	static PLAT_UINT16	ByteSwap16 (PLAT_UINT16 nValue);
+	static PLAT_UINT32	ByteSwap32 (PLAT_UINT32 nLongNumber);
+	static PLAT_UINT64	ByteSwap64 (PLAT_UINT64 nLongNumber);
+	static bool			needSwap();
 
+    static void bigPackToLE(PLAT_UBYTE* bigPackHead) ;
+    static void bigPackToBE(PLAT_UBYTE* bigPackHead)  ;
+    static void littlePackToLE(PLAT_UBYTE* bigPackHead);
+    static void littlePackToBE(PLAT_UBYTE* bigPackHead);
+   
 	//
-	static void pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack);
+	static void         pushBackPack(PLAT_UBYTE* bigPackHead, PLAT_UBYTE * ppack);
 
+    static bool        hasMsgHead(const PLAT_UBYTE * littlepack);
+    static PLAT_UINT32 getLittlePackDateType(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackUID(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackSID(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackDID(const PLAT_UBYTE * littlepack);
@@ -41,8 +45,19 @@ public:
 	//Big package
 	static PLAT_UINT32 getUnitCounts(const PLAT_UBYTE* bigPackHead);
 	static PLAT_UBYTE* getUnitHead(const PLAT_UBYTE* bigPackHead, PLAT_UINT32 indx); //start from 0;
-	static void initBigPackIdx(PLAT_UBYTE* p);
-	static void updateBigPackIdx(PLAT_UBYTE* bigPackHead, const T_DATA_INDEX & idxData);	
+	static void        initBigPackIdx(PLAT_UBYTE* p);
+	static void        updateBigPackIdx(PLAT_UBYTE* bigPackHead, const T_DATA_INDEX & idxData);	
+
+private:
+    // isBigEndianP means bigPackHead is big endian, when get unit count form index.
+	static void         swapBigpackage(PLAT_UBYTE* bigPackHead, bool isBigEndianP);
+	static void         swapIdx(PLAT_UBYTE* bigPackHead);
+    // isBigEndianP means bigPackHead is big endian, when get unit id form unit head.
+    //unit id determine if it has msg head.
+	static void         swapLittlePackage(PLAT_UBYTE * littlepack, bool isBigEndianP);
+	static void         swapUnitHead(PLAT_UBYTE * littlepack);
+	static void         swapUnitMsgHead(PLAT_UBYTE * littlepack);
+
 };
 
 

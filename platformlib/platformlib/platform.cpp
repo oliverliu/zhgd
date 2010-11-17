@@ -47,7 +47,10 @@ CAppInterface::CAppInterface()
 	m_pei = new packetprocess();
 
 	m_fpFromTerminalLog = NULL;
-	m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
+	m_fpFromTerminalLog = fopen(g_fromTerminalLog, "w");
+    fclose(m_fpFromTerminalLog);
+
+	InitSrcId();
 }
 
 CAppInterface::~CAppInterface()
@@ -127,6 +130,8 @@ PLAT_INT32 CAppInterface::AppInit()
 
 	app_init(uintBuf,s_host);
 
+    m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
+
 	//srcID = 0;
 	
 // 	srcID =sid;
@@ -158,26 +163,30 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
 
 PLAT_INT32 CAppInterface::AppWrite()
 {
-	//debug client to platform data
-	fprintf(m_fpFromTerminalLog, "Write data: \n");
-	CUtility::outputPackage(APP_WRITE_ADDR,m_fpFromTerminalLog);
+	if(CUtility::needSwap())
+	{
+		//big endian to little
+        CUtility::bigPackToLE(send);
+	}
 
-	int j;
+    //debug client to platform data
+    fprintf(m_fpFromTerminalLog, "Write data: \n");
+    CUtility::outputPackage(APP_WRITE_ADDR,m_fpFromTerminalLog);
 
- //   m_pei->pPlataddr = platBuf;
-	//m_pei->Decoder(send);		
-	//
-	
 	if (srcID == 0)
 	{
 		PLAT_UBYTE *p = CUtility::getUnitHead(send, 0);
 		srcID = CUtility::getLittlePackSID(p);
 		sprintf(src, "%08x", srcID);		
-	}         
+	}   
+	else
+	{
+		sprintf(src, "%08x", srcID);	
+	}
 
 	int count = CUtility::getUnitCounts(send);
 	/*循环遍历数据包中各数据单元，得到各单元的目的地ID*/ 
-	for(j =0;j < count;j++)		          
+	for(int j = 0;j < count;j++)		          
 	{		
 		PLAT_UINT8 * addr = CUtility::getUnitHead(send, j); // send+m_pei->index.unitAddrOffset[j]; 
 		//memcpy(uintBuf, addr, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);//include msg header
@@ -188,10 +197,17 @@ PLAT_INT32 CAppInterface::AppWrite()
 		
 		sprintf(dst,"%08x",dstID);
 		
+        //maybe update data in platform buffer  where the data is little endian
 		procMsgOut(uintBuf);
 		procConnectControl(uintBuf);
 		procBroadMsg(uintBuf);
 		procInputAppStatus(uintBuf);
+
+		if (CUtility::needSwap())
+		{
+			//little to big endian for output to db
+            CUtility::littlePackToBE(uintBuf);
+		}
 
 		if((dstID&0x00000FF0)==0x00000FF0)				//说明目的地为CC，此时应该将对应的ATP和ATO中同时压入内容
 		{
@@ -261,7 +277,7 @@ void CAppInterface::unInitPackage(PLAT_UBYTE* _ppack)
 void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 {
 	T_UNIT* ppack = (T_UNIT*) _ppack;
-	ppack->unitSize = CUtility::LetoBe32(len);
+	ppack->unitSize = len;
 	ppack->unitData = ( PLAT_BYTE* )(_ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD));
 
 	switch (type)
@@ -274,7 +290,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x23); //0x23
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 			
-			ppack->unitId = CUtility::LetoBe32(ppack->unitId);
+			ppack->unitId = ppack->unitId;
 			*(ppack->unitData) = 0x23;
 		}	
 		break;
@@ -286,7 +302,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x20); //0x20
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 
-			ppack->unitId = CUtility::LetoBe32(ppack->unitId);
+			ppack->unitId = ppack->unitId;
 			*(ppack->unitData) = 0x20;
 		}
 		break;
@@ -436,12 +452,22 @@ PLAT_UINT32 getPlatformID( PLAT_UINT32 srcid)
 }
 
 
+void CAppInterface::InitSrcId()
+{
+	srcID = 0x21000002;
+}
 
+PLAT_INT32 CAppInterface::GetSrcId()
+{
+	return srcID;
+}
 
 PLAT_INT32 CAppInterface::AppRead()
 {	
 	int len;
 	int j;
+
+    CUtility::initBigPackIdx(recv);
 
 	if (srcID == 0)
 		return 0;
@@ -462,7 +488,13 @@ PLAT_INT32 CAppInterface::AppRead()
 	{
 		memset(&uintBuf, 0x00, SIZE);
 		/*将平台的数据源缓冲区中数据单元从缓冲区中弹出*/
-		app_lpop(src);								 
+		app_lpop(src);			
+
+		if(CUtility::needSwap())
+		{
+			//big endian to little endian for little package
+            CUtility::littlePackToLE(uintBuf);
+		}
 
 		CUtility::pushBackPack(recv, uintBuf);
   		/*对平台的数据源缓冲区中弹出的数据单元进行组包*/
@@ -484,18 +516,23 @@ PLAT_INT32 CAppInterface::AppRead()
 	//get platform data for read
 	//read little package from platform buffer and push little package to big package
 	PLAT_UINT32 unitCounts = CUtility::getUnitCounts(platBuf);
-	if(app_display() ==1)
- 		printf("读取的平台中单元个数：plat:platlen =%s:%d\n", plat, unitCounts);
 	for (int idx = 0; idx < unitCounts; idx++)
 	{
 		PLAT_UBYTE * p = CUtility::getUnitHead(platBuf, idx);
 		CUtility::pushBackPack(recv, p);
 	}
 
-	//debug
+    //debug
 	fprintf(m_fpFromTerminalLog, "Read data: \n");
 	CUtility::outputPackage(APP_READ_ADDR,m_fpFromTerminalLog);
-	CUtility::outputPackage(platBuf,m_fpFromTerminalLog);
+	//CUtility::outputPackage(platBuf,m_fpFromTerminalLog);
+
+	if(CUtility::needSwap())
+	{
+        //to big endian
+        CUtility::bigPackToBE(recv);
+	}
+
 	return 0;
 }
 

@@ -14,7 +14,7 @@
 #pragma pack(1)																		/*设定为1字节对齐*/
 
 
-#define _MESSAGE_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
+//#define _MESSAGE_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
 
 class 	CZc;
 class  packetprocess;
@@ -32,6 +32,8 @@ public:
 	PLAT_INT32		AppWrite();                                                     /*平台提供的写数据包函数*/                                         
 	PLAT_INT32		AppRead();                                                      /*平台提供的读数据包函数*/	
 	PLAT_INT32		AppClose();
+	void			InitSrcId();
+	PLAT_INT32		GetSrcId();
 
 private:
 	void			procConnectState(PLAT_UBYTE* p);
@@ -64,8 +66,8 @@ private:
 	char src[IDSIZE];                 
 	char dst[IDSIZE];
 	char plat[IDSIZE];
-	PLAT_UINT8 uintBuf[SIZE];														/*暂存数据包中各单元的数据*/
-    PLAT_UINT8 platBuf[SIZE];														/*暂存平台数据缓冲区中弹出的单元数据*/
+	PLAT_UINT8 uintBuf[SIZE];//save data from other terminal send me, the data from other termianl is big endian
+    PLAT_UINT8 platBuf[SIZE];//save data in platform, the data is liitle endian for internal use
     
 	CZc*      m_pzc;
 
