@@ -1,2 +1,17 @@
 test
 hello merge
+
+feature:
+1. support big and little endian, using mac define _USING_BIG_ENDIAN that means input / ouput data is big endian.
+2. determine if swap byte sequence, the method is local machine byte sequence is equal to _USING_BIG_ENDIAN, example local is little endian and define _USING_BIG_ENDIAN mac, then need swap. if local is big endian and define has executed, the swap is not to do.
+
+limits:
+1. If the before data in db is little endian, using lib of big endian, the program caused to be crashed. that is to say when data in db and lib endian are different, the crash will not stop until the data in db pop finished.
+ 
+questions: 
+    how to determine the endian of data difference between in db and in running state?
+
+method:
+    to avoid crashing when change endian sequence, clear db data. How to identify change endian sequence? using file flag when debug. when changed, file flag is exist, only pop data when un Read at first time and delete file flag. the subsquent read is normally.
+
+had better has a method to determine if the endian is changed or not. or else crash will give us more trouble.
