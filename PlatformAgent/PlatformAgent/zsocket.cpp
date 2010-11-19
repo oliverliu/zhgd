@@ -217,9 +217,6 @@ void ZSocket::dealWithData(	int listnum	)
     {
          //response it
         char data[] =  "abcd";
-
-		// We got some data
-		plog("\nReceived: %s; slot=%d, write out %s",buffer, listnum,data);       
         int byteSent = write (sockId, data, sizeof(data), SS_DATA_UNIMPORTANT);
 		if (byteSent == SS_FAILED)
 		{
@@ -227,6 +224,11 @@ void ZSocket::dealWithData(	int listnum	)
 			plog ("Failed: data to be sent, errNumber = %u\n", errNumber);
 			return;
 		}
+        else
+        {
+            // We got some data
+		    plog("\nReceived: %s; slot=%d, write out %s",buffer, listnum,data);     
+        }
 	}
 }
 

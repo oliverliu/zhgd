@@ -1,8 +1,14 @@
 // Definition of the ZSocket class
-
 #ifndef Z_ZSocket_CLASS
 #define Z_ZSocket_CLASS
 
+/* (C) COPYRIGHT 2010 BY ZHEDAWANGXIN CORPORATION ALL RIGHTS RESERVED
+ * Create Data: 2010-11-15
+ * Version: 0.1
+ * Author: Liuning
+ * Contact: liuning@zdwxgd.com
+ * Description: for platform simulator network layer
+ */
 #include "safeSocket.h"
 #include <string>
 
