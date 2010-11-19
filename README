@@ -1,6 +1,10 @@
 test
 hello merge
 
+[2010-11-17]
+Assumptions:
+   1.对大包进行分解的时候，无法得知小包是否含有msgheader？ 解决方法： 通过UID里面的dataType来判断，目前如果dataType == 6时， 没有msgheader，其他默认为有msg  header
+
 feature:
 1. support big and little endian, using mac define _USING_BIG_ENDIAN that means input / ouput data is big endian.
 2. determine if swap byte sequence, the method is local machine byte sequence is equal to _USING_BIG_ENDIAN, example local is little endian and define _USING_BIG_ENDIAN mac, then need swap. if local is big endian and define has executed, the swap is not to do.
@@ -14,4 +18,5 @@ questions:
 method:
     to avoid crashing when change endian sequence, clear db data. How to identify change endian sequence? using file flag when debug. when changed, file flag is exist, only pop data when un Read at first time and delete file flag. the subsquent read is normally.
 
-had better has a method to determine if the endian is changed or not. or else crash will give us more trouble.
+Suggestions:
+	had better has a method to determine if the endian is changed or not. or else crash will give us more trouble.

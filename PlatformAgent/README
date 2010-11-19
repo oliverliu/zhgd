@@ -1,0 +1,25 @@
+[2010-11-19]
+[Assumptions]
+   
+
+[feature]
+   1. find out safeprotocol.lib bug
+      1.1 SS_FD_ISSET return value error.  [fixed]
+      1.2 client reconnect server, exception SET is not set. [fixed]
+      1.3 p1 protocol lose message package.   [NOT]
+         Maybe because set FD_SET error. from my test, the FD_ISSET(id, &recv) should be true, but it give me FD_ISSET(id, &send) true. Here, send and recv is FD_SET. that is to say, protocol should tell me to read and not to write.
+      1.4 cient reconnect server, the socket id is not same id. [NOT]
+         I test on a same machine. please confirm it.
+   2. finished agent server and test client.
+
+[limits]
+
+ 
+[questions]
+    
+
+[method]
+    
+
+[Suggestions]
+	
