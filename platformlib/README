@@ -1,0 +1,31 @@
+Acronym:
+plsim: platform simulator
+
+
+zc operation sequence:
+
+1. Read process
+   1.1 transfer them.
+   
+2. Write process
+   2.1 IS connection message
+   	2.1.1 create connection
+   	2.1.2 get connection state and new a packge to big package, the package is [01 000110 0x23 00 1 0x23] for now
+   	2.1.3 write the new package to platform buffer for next READ proc
+        2.1.4 Notify update List that maintain its connections. - Add
+   2.2 IS Disconnnection message
+        2.2.1 remove connnection
+        2.2.2 get operation state and new a package to big package£¬the package is [01 000110 0x20 00 1 0x20] for now
+        2.2.3 write the new package to platform buffer
+        2.2.4 Notify update List. - Delete
+   2.3 Is broadcast message
+        Now is NOT implement because the feature is killed
+   2.4 Is communication Message
+        Change UID datatype, swap INPUT and OUTPUT. INPUT message data type is 0x5, OUTPUT is 0xa.
+
+3. Assumptions:
+    3.1. zc id is 0x20000002
+
+4. Limits
+    4.1. Platform must know its self ID, maybe SID. If plsim do not kown its SID, it can not fetch data from db. So  now we define its id is 0x20000002 with ATO/ATP and ZC.
+    4.2 platform buffer is increased, no chance to decrease.
