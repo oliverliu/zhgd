@@ -13,7 +13,7 @@
 
 #include "zc\ZCDataStruct.h"
 
-#include "platform.h"
+//#include "platform.h"
 #include "platformhead.h"
 #include "cutility.h"
 #include "platforminterface.h"

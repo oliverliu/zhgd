@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="platfom">
-      <UniqueIdentifier>{d6fa6fc1-1655-48ad-b410-e0e26215a98a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="zc">
       <UniqueIdentifier>{1d905f96-a666-485a-9468-bb210fa5d571}</UniqueIdentifier>
     </Filter>
@@ -47,21 +44,6 @@
     </ClInclude>
     <ClInclude Include="zc\ZCDataStruct.h">
       <Filter>zc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\platformlib\platformlib\cutility.h">
-      <Filter>platfom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\platformlib\platformlib\InterfaceDataStruct.h">
-      <Filter>platfom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\platformlib\platformlib\platform.h">
-      <Filter>platfom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\platformlib\platformlib\platformhead.h">
-      <Filter>platfom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\platformlib\platformlib\platforminterface.h">
-      <Filter>platfom</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

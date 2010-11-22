@@ -51,7 +51,7 @@ const char * s_host = "192.168.20.100";
 CAppInterface::CAppInterface()
 {
 	m_pzc = new CZc();
-	m_pei = new packetprocess();
+	//m_pei = new packetprocess();
     m_pRedis = new ZRedis();
 
 	m_fpFromTerminalLog = NULL;
@@ -73,11 +73,6 @@ CAppInterface::~CAppInterface()
 	{
 		delete m_pzc;
 		m_pzc = NULL;
-	}
-	if( m_pei )
-	{
-		delete m_pei;
-		m_pei = NULL;
 	}
 
 	if(m_fpFromTerminalLog)

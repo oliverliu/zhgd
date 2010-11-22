@@ -16,7 +16,6 @@
 //#define _MESSAGE_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
 
 class  CZc;
-class  packetprocess;
 class  ZRedis;
 
 extern const char * g_fromTerminalLog;
@@ -53,8 +52,7 @@ private:
 	PLAT_INT32		AppRead(char *);
 	void			OutputUint(PLAT_UINT8 * ,int);									/*数据包各单元数据打印函数*/
 
-private:
-	packetprocess*  m_pei;																/*定义的平台包处理类的对象*/
+private:															/*定义的平台包处理类的对象*/
     ZRedis * m_pRedis;
 
 	PLAT_UINT8 *send;																/*平台接收的数据包的首地址*/
