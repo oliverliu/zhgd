@@ -427,54 +427,6 @@ int credis_info(REDIS rhnd, REDIS_INFO *info);
 
 int credis_monitor(REDIS rhnd);
 
-/* init data buffer and credis */
-int app_init(unsigned char *,const char *);
-
-/* close credis */
-int app_close();
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_zeroinit();
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_recv();
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_rpush(char *ci);
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_llen(char *ci);
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_lpop(char *ci);
-
-/* returns UNIX time stamp of last successfull save to disk */
-char* app_getid();
-
-/* returns UNIX time stamp of last successfull save to disk */
-void app_2_char();
-
-/* returns UNIX time stamp of last successfull save to disk */
-void app_2_uint();
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_run();
-
-int app_display();               //控制是否平台打印
-
-int app_displaybig();            //控制是否打印大包
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_sleep();
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_step(char *);
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_set(char *,char *);
-
-/* returns UNIX time stamp of last successfull save to disk */
-int app_get(char *,char *);
 
 /* setting host to NULL and/or port to 0 will turn off replication */
 int credis_slaveof(REDIS rhnd, const char *host, int port);

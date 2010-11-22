@@ -2,7 +2,11 @@
 
 Test NO.0
 READ: 
-package has 0 unit
+package has 2 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
 Write: 
 package has 2 unit
 NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
@@ -71,6 +75,72 @@ ff  00  20  46  01  00  00  00  20
 NO. 6 package: unitId = 462300ff, unitSize = 1, data:
 ff  00  23  46  01  00  00  00  23  
 NO. 7 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+Write: 
+package has 2 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+
+
+Test NO.4
+READ: 
+package has 10 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 2 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 3 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 4 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 5 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 6 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 7 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 8 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 9 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+Write: 
+package has 2 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+
+
+Test NO.5
+READ: 
+package has 12 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  10  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 1 package: unitId = 4baa1234, unitSize = 42, data:
+34  12  aa  4b  2a  00  00  00  02  00  00  00  02  00  00  00  00  00  00  00  02  00  00  21  02  00  00  21  01  00  00  ff  0e  00  00  00  11  00  02  00  00  21  02  00  00  21  00  00  00  00  
+NO. 2 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 3 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 4 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 5 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 6 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 7 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO. 8 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO. 9 package: unitId = 462000ff, unitSize = 1, data:
+ff  00  20  46  01  00  00  00  20  
+NO.10 package: unitId = 462300ff, unitSize = 1, data:
+ff  00  23  46  01  00  00  00  23  
+NO.11 package: unitId = 462000ff, unitSize = 1, data:
 ff  00  20  46  01  00  00  00  20  
 Write: 
 package has 2 unit

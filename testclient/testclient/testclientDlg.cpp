@@ -199,7 +199,7 @@ HCURSOR CTestClientDlg::OnQueryDragIcon()
 
 void createPacakge();
 
-CAppInterface app;
+//CAppInterface app;
 
 PLAT_UBYTE APP_READ_ADDR_SWAP[NETSIZE];
 PLAT_UBYTE APP_WRITE_ADDR_SWAP[NETSIZE];
@@ -207,7 +207,6 @@ PLAT_UBYTE APP_WRITE_ADDR_SWAP[NETSIZE];
 void CTestClientDlg::OnBnClickedButton1()
 {
 	// TODO: Add your control notification handler code here
-	
 	FILE *fp = NULL;
 	fp = fopen("test.txt", "a+");
  
@@ -218,8 +217,6 @@ void CTestClientDlg::OnBnClickedButton1()
 		InitPlatformInterface();
 	}
 	fprintf(fp, "\n\nTest NO.%d\n", i++);
-
-   
 
 	//app.AppRead();
 	ReadFormPlatform();

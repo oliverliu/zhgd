@@ -13,11 +13,11 @@
 
 #pragma pack(1)																		/*设定为1字节对齐*/
 
-
 //#define _MESSAGE_BIG_ENDIAN    //if no define it, regard the message is little endian sequence.
 
-class 	CZc;
+class  CZc;
 class  packetprocess;
+class  ZRedis;
 
 extern const char * g_fromTerminalLog;
 
@@ -55,6 +55,7 @@ private:
 
 private:
 	packetprocess*  m_pei;																/*定义的平台包处理类的对象*/
+    ZRedis * m_pRedis;
 
 	PLAT_UINT8 *send;																/*平台接收的数据包的首地址*/
 	PLAT_UINT8 *recv;																/*平台接收的数据包的首地址*/

@@ -85,18 +85,30 @@ int ZSocket::getWriteSocket(char *ip)
 	SS_FD_ZERO (& exceptSet);
 	SS_FD_SET (m_idWrite, & exceptSet);
 
+    TSafeSocket_FdSet  writeSet;
+    SS_FD_ZERO(&writeSet);
+    SS_FD_SET (m_idWrite, & writeSet);
+
     /* wait until connection has established */
-	errNumber = safeSocket_select (0, NULL, NULL, & exceptSet, NULL);
+	//errNumber = safeSocket_select (0, NULL, NULL, & exceptSet, NULL);
+    errNumber = safeSocket_select (0, NULL, &writeSet, & exceptSet, NULL);
 	if (errNumber == 0)
 	{
 		plog ("select error: connection hasn't been established!\n");
 		return -1;
 	}
 
+     //if (SS_FD_ISSET(m_idWrite,&writeSet))
+     //{
+     //    plog("select can write!\n");
+     //}
+
+    int ret = -1;
 	if (SS_FD_ISSET(m_idWrite, &exceptSet))
-		return m_idWrite;
-	else 
-		return -1;
+		ret = m_idWrite;
+	
+
+    return ret;
 }
 
 bool ZSocket::preRead()

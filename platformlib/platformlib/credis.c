@@ -60,10 +60,10 @@
 
 
 //modify by ibm
-REDIS redis = NULL;
-char charBuf[CHARSIZE];
-PLAT_UINT8 *uintBuf;
-char *wid;
+//REDIS redis = NULL;
+//char charBuf[CHARSIZE];
+//PLAT_UINT8 *uintBuf;
+//char *wid;
 //end modify
 
 typedef struct _cr_buffer {
@@ -564,7 +564,6 @@ static int cr_sendfandreceive(REDIS rhnd, char recvtype, const char *format, ...
 
 void credis_close(REDIS rhnd)
 {
-
   //if (rhnd->fd > 0)
   //  close(rhnd->fd);
   if (rhnd->fd > 0) // has connected and init
@@ -1225,215 +1224,5 @@ int credis_smembers(REDIS rhnd, const char *key, char ***members)
   return cr_multikeybulkcommand(rhnd, "SMEMBERS", 1, &key, members);
 }
 
-//add by ibm
-int app_zeroinit()
-{
-	redis = credis_connect(NULL, 0, 10000);
-	return 0;
-}
 
-int app_close()
-{
-    if (redis != NULL)
-	 credis_close(redis);
-	return 0;
-}
-
-int app_init(PLAT_UINT8 *uin, const char *host)
-{
-	redis = credis_connect(host, 0, 10000);
-
-	memset(charBuf,'\0',CHARSIZE);
-	uintBuf = uin;
-	memset(uintBuf,'\0',SIZE);
-
-	return 0;
-}
-
-int app_run()
-{
-	char *val;
-	credis_get(redis, "RUN", &val);
-	if(val != NULL)
-		return atoi(val);	
-	else 
-		return 0;
-}
-
-static void read(char* record, char** val)
-{
-	credis_get(redis, record, val);
-}
-
-//******************************************************************************
-// Function: app_display
-// Brief:   控制平台端是否显示打印信息的函数
-// Returns: int
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
-int app_display()
-{
-	char *val = NULL;
-	int i = 0;
-	credis_get(redis, "DISPLAY", &val);
-	if(val != NULL)
-		i = atoi(val);	
-	
-	return i;
-}
-
-//******************************************************************************
-// Function: app_displaybig
-// Brief:   控制平台端是否打印打包数据的函数 
-// Returns: int
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
-int app_displaybig()
-{
-	char *val = NULL;
-	int i = 0;
-	credis_get(redis, "DISPLAYBIG", &val);
-	if(val != NULL)
-		i = atoi(val);	
-	
-	return i;
-}
-
-int app_sleep()
-{
-	char *val;
-	credis_get(redis, "SLEEP", &val);
-	if(val != NULL)
-		return atoi(val);	
-	else 
-		return 0;
-}
-
-int app_step(char *src)
-{
-	char *val;
-	credis_getset(redis, src, "0", &val);
-	if(val != NULL)
-		return atoi(val);	
-	else 
-		return 0;
-}
-
-void app_2_char()
-{
-	int i;
-	memset(charBuf,'\0',CHARSIZE);
-	for(i = 0;i < SIZE;i ++)
-	{
-		if(uintBuf[i] == 0)
-		{
-			charBuf[i] = 1;
-			charBuf[i+SIZE] = 1;
-		}
-		else
-		{
-			charBuf[i] = 2;
-			charBuf[i+SIZE] = uintBuf[i];
-		}
-	}
-}
-
-void app_2_uint()
-{
-	int i;
-	PLAT_UINT8 u;
-
-	memset(uintBuf,'\0',SIZE);
-	for(i = 0;i < SIZE;i ++)
-	{
-		u = (PLAT_UINT8) charBuf[i];
-		if(u == 1)
-		{
-			uintBuf[i] = 0;
-		}
-		else
-		{
-			uintBuf[i] = (PLAT_UINT8)charBuf[i+SIZE];
-		}
-	}
-
-}
-
-int app_rpush(char *dst)
-{
-	app_2_char();
-	credis_rpush(redis, dst, charBuf);
-	
-	return 0;
-}
-
-int app_llen(char *dst)
-{
-	return(credis_llen(redis, dst));
-}
-
-int app_lpop(char *src)
-{
-	char *val;
-	credis_lpop(redis,src,&val);
-	if(val != NULL)
-	{
-		strncpy(charBuf,val,SIZE*2);
-		app_2_uint();
-	}
-	return 0;
-}
-
-int app_recv()
-{
-	char *val;
-	PLAT_UINT8 u;
-	int i;
-
-	if(wid == NULL) 
-	{
-		printf("please tellme where to recv!\n");
-		return -1;
-	}
-	credis_get(redis, wid, &val);
-	if(val == NULL) 
-	{
-		printf("recv %s wrong\n",wid);
-		return -1;
-	}
-
-	for(i = 0;i < SIZE;i ++)
-	{
-		u = (PLAT_UINT8) val[i];
-		if(u == 1)
-		{
-			uintBuf[i] = 0;
-		}
-		else
-		{
-			uintBuf[i] = (PLAT_UINT8)val[i+SIZE];
-		}
-	}
-	return 0;
-}
-
-int app_set(char *key, char *buf)
-{
-	credis_set(redis,key,buf);
-	return 0;
-}
-
-int app_get(char *key, char *buf)
-{
-	char *val;
-	
-	credis_get(redis,key,&val);
-	if(val != NULL)
-	{
-		strcpy(buf,val);
-	}
-	return 0;
-}
 

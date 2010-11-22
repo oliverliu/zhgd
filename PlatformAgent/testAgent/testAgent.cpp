@@ -28,7 +28,6 @@ int _tmain(int argc, _TCHAR* argv[])
     ZSocket client;
     int socketid = client.getWriteSocket("127.0.0.1");
 
-    
     pClientFile = fopen (logfile, "a+");
 
     bool bFinishRead = false;
@@ -40,31 +39,6 @@ int _tmain(int argc, _TCHAR* argv[])
         SS_FD_ZERO(&m_sendSet);
         SS_FD_SET(socketid,&m_recvSet);
         SS_FD_SET(socketid,&m_sendSet);
-
-        static bool bfirst = false;
-		if (!bfirst)
-		{
-			bfirst = true;
-			memset(data,0,10);
-
-			byteRead = fread (data, 1, 4, pReadFile);
-            if (byteRead <= 0)
-            {
-                printf("Error: from file\n");
-                continue;
-            }
-            printf("%s\n",data);
-			byteSent = client.write(socketid, data, byteRead, SS_DATA_UNIMPORTANT);
-		
-			if (byteSent == SS_FAILED)
-			{
-				errNumber = safeSocket_getErrorNum (socketid);
-				fprintf (pClientFile, "data failed to be sent, errNumber = %u\n", errNumber);
-				return -1;
-			}
-              /* indicate data has been sent */
-			fprintf (pClientFile, "write out1: msg contains %u bytes - %s\n", byteSent, data);
-		}
 
 		int readsocks = safeSocket_select (0, &m_recvSet, &m_sendSet, NULL,  NULL);
         if (readsocks < 0) 

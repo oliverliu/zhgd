@@ -39,6 +39,9 @@
     <ClCompile Include="platforminterface.cpp">
       <Filter>interface</Filter>
     </ClCompile>
+    <ClCompile Include="zredis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="credis.h">
@@ -67,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="platforminterface.h">
       <Filter>interface</Filter>
+    </ClInclude>
+    <ClInclude Include="zredis.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

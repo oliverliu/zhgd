@@ -7,6 +7,7 @@
 #include "wintimer.h"
 #include "cutility.h"
 #include "packetprocess.h"
+#include "zredis.h"
 
 #include <stdarg.h>
 int msglevel = 3; /* the higher, the more messages... */
@@ -41,10 +42,17 @@ void pmesg(int level, const char* format, ...) {
 
 PLAT_UINT32 CAppInterface::srcID = 0;
 
+PLAT_UBYTE APP_READ_ADDR[NETSIZE];
+PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];
+const char * g_fromTerminalLog = "fromTerminalLog.txt";
+
+const char * s_host = "192.168.20.100";
+
 CAppInterface::CAppInterface()
 {
 	m_pzc = new CZc();
 	m_pei = new packetprocess();
+    m_pRedis = new ZRedis();
 
 	m_fpFromTerminalLog = NULL;
 	m_fpFromTerminalLog = fopen(g_fromTerminalLog, "w");
@@ -55,9 +63,13 @@ CAppInterface::CAppInterface()
 
 CAppInterface::~CAppInterface()
 {
-    AppClose();
+     if ( m_pRedis )
+     {
+         delete m_pRedis;
+         m_pRedis = NULL;
+     }
 
-	if(m_pzc)
+    if(m_pzc)
 	{
 		delete m_pzc;
 		m_pzc = NULL;
@@ -67,55 +79,18 @@ CAppInterface::~CAppInterface()
 		delete m_pei;
 		m_pei = NULL;
 	}
+
 	if(m_fpFromTerminalLog)
+    {
 		fclose(m_fpFromTerminalLog);
+    }
 
 }
 
-//******************************************************************************
-// Function: CAppInterface::AppClose
-// Brief:   关闭平台接口 ？？
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
 PLAT_INT32 CAppInterface::AppClose()
 {
-	app_close();
 	return 0;
 }
-
-//******************************************************************************
-// Function: CAppInterface::OutputUint
-// Brief:   输入、输出数据包打印函数 
-// Returns: void
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
-void CAppInterface::OutputUint(PLAT_UINT8* uout,int len)
-{
-	int i;	
-	for(i =0;i <len;i++)
-	{	
-		if(!(uout[i] ==0))
-		printf("%u  ",uout[i]);
-	}	
-	printf("\n");
-}
-
-//******************************************************************************
-// Function: CAppInterface::AppInit
-// Brief:   平台提供的初始化调用函数 
-// Returns: PLAT_INT32
-// Author:  刘志盼
-// Data:	2010/10/09
-//******************************************************************************
-
-PLAT_UBYTE APP_READ_ADDR[NETSIZE];
-PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];
-const char * g_fromTerminalLog = "fromTerminalLog.txt";
-
-const char * s_host = "192.168.20.100";
 
 PLAT_INT32 CAppInterface::AppInit()
 {
@@ -130,28 +105,29 @@ PLAT_INT32 CAppInterface::AppInit()
 	CUtility::initBigPackIdx(recv);
 	CUtility::initBigPackIdx(platBuf);
 
-	app_init(uintBuf,s_host);
-
     m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
+
+    m_pRedis->app_init(s_host);
+    //app_init(uintBuf,s_host);
 
 	return 0;
 }
 
 PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,char *host)
 {
-	app_init(uintBuf,host);
-	
-	send = s;
-	recv = r;
-	
-	srcID = sid;
-	memset(src, '\0', IDSIZE);
-	sprintf(src, "%08x", sid);
-	memset(send, '\0', NETSIZE);
-	memset(recv, '\0', NETSIZE);
+	//m_pRedis->app_init(s_host);
+	//
+	//send = s;
+	//recv = r;
+	//
+	//srcID = sid;
+	//memset(src, '\0', IDSIZE);
+	//sprintf(src, "%08x", sid);
+	//memset(send, '\0', NETSIZE);
+	//memset(recv, '\0', NETSIZE);
 
-	CUtility::initBigPackIdx(send);
-	CUtility::initBigPackIdx(recv);
+	//CUtility::initBigPackIdx(send);
+	//CUtility::initBigPackIdx(recv);
 	return 0;
 }
 
@@ -202,13 +178,18 @@ PLAT_INT32 CAppInterface::AppWrite()
 		{
 			dstID =(dstID&0x1000000F)|0x60000000;       //将目的地修改为ATP
 			sprintf(dst,"%08x",dstID);
-			app_rpush(dst);
+            m_pRedis->app_rpush(dst, uintBuf);
+			//app_rpush(dst);
 
 			dstID =(dstID&0x1000000F)|0x40000000;        //将目的地修改为ATO
 			sprintf(dst,"%08x",dstID);
+            m_pRedis->app_rpush(dst, uintBuf); 
 		}
-
-        app_rpush(dst);								/*将数据包中各数据单元压入相应目的地ID的缓冲区中*/                    	
+        else
+        {
+            /*将数据包中各数据单元压入相应目的地ID的缓冲区中*/   
+            m_pRedis->app_rpush(dst, uintBuf);   
+        }
 	}//end of for
 	return 0;
 }
@@ -429,7 +410,7 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
 
 			char tmp[IDSIZE];
 			sprintf(dst,"%08x",*it);
-			app_rpush(tmp);	
+			m_pRedis->app_rpush(tmp, uintBuf);	
 		}
 	}
 }
@@ -466,17 +447,17 @@ PLAT_INT32 CAppInterface::AppRead()
 
 	char srccc[11];
 	sprintf(srccc,"%s",src);
-	while((app_run() >0) && (app_step(srccc) ==0))
+	while((m_pRedis->app_run() >0) && (m_pRedis->app_step(srccc) ==0))
 	{
 		PlatformSleep(10);							/*休眠10ms*/      
 	}
 	
-	len = app_llen(src);
+	len = m_pRedis->app_llen(src);
 	for(j =0;j <len;j++)
 	{
 		memset(&uintBuf, 0x00, SIZE);
 		/*将平台的数据源缓冲区中数据单元从缓冲区中弹出*/
-		app_lpop(src);			
+		 m_pRedis->app_lpop(src, uintBuf);			
 
 		if(CUtility::needSwap())
 		{
@@ -519,14 +500,14 @@ PLAT_INT32 CAppInterface::AppRead()
 PLAT_INT32 CAppInterface::AppWrite(char *dst)
 {
 	memset(uintBuf,'a',100);
-	app_rpush(dst);                                           
+	m_pRedis->app_rpush(dst, uintBuf);                                           
 	return 0;
 }
 
 PLAT_INT32 CAppInterface::AppRead(char *src)
 {
 	int i;
-	app_lpop(src);
+	m_pRedis->app_lpop(src, uintBuf);
 	for(i =0;i <SIZE;i++)
 	{
 		printf(" %u",uintBuf[i]);

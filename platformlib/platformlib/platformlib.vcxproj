@@ -88,6 +88,7 @@
     <ClCompile Include="platform.cpp" />
     <ClCompile Include="platforminterface.cpp" />
     <ClCompile Include="wintimer.cpp" />
+    <ClCompile Include="zredis.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="credis.h" />
@@ -99,6 +100,7 @@
     <ClInclude Include="platformhead.h" />
     <ClInclude Include="platforminterface.h" />
     <ClInclude Include="wintimer.h" />
+    <ClInclude Include="zredis.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
