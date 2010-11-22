@@ -55,6 +55,8 @@ CAppInterface::CAppInterface()
 
 CAppInterface::~CAppInterface()
 {
+    AppClose();
+
 	if(m_pzc)
 	{
 		delete m_pzc;
@@ -132,14 +134,6 @@ PLAT_INT32 CAppInterface::AppInit()
 
     m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
 
-	//srcID = 0;
-	
-// 	srcID =sid;
-// 	memset(src, '\0', IDSIZE);
-// 	sprintf(src, "%08x", sid);
-// 	memset(send, '\0', NETSIZE);
-// 	memset(recv, '\0', NETSIZE);
-
 	return 0;
 }
 
@@ -177,12 +171,9 @@ PLAT_INT32 CAppInterface::AppWrite()
 	{
 		PLAT_UBYTE *p = CUtility::getUnitHead(send, 0);
 		srcID = CUtility::getLittlePackSID(p);
-		sprintf(src, "%08x", srcID);		
 	}   
-	else
-	{
-		sprintf(src, "%08x", srcID);	
-	}
+	sprintf(src, "%08x", srcID);	
+
 
 	int count = CUtility::getUnitCounts(send);
 	/*循环遍历数据包中各数据单元，得到各单元的目的地ID*/ 
@@ -190,11 +181,9 @@ PLAT_INT32 CAppInterface::AppWrite()
 	{		
 		PLAT_UINT8 * addr = CUtility::getUnitHead(send, j); // send+m_pei->index.unitAddrOffset[j]; 
 		//memcpy(uintBuf, addr, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);//include msg header
-		memcpy(uintBuf, addr,CUtility::getLittlePackSize(addr) );//include msg header
+		memcpy(uintBuf, addr, CUtility::getLittlePackSize(addr) );//include msg header
 
 		dstID = CUtility::getLittlePackDID(addr);
-		//dstID = m_pei->GetDestID(srcID, send, j, m_pei->id[j]);	
-		
 		sprintf(dst,"%08x",dstID);
 		
         //maybe update data in platform buffer  where the data is little endian
@@ -217,10 +206,9 @@ PLAT_INT32 CAppInterface::AppWrite()
 
 			dstID =(dstID&0x1000000F)|0x40000000;        //将目的地修改为ATO
 			sprintf(dst,"%08x",dstID);
-			app_rpush(dst);
 		}
-		else
-			app_rpush(dst);								/*将数据包中各数据单元压入相应目的地ID的缓冲区中*/                    	
+
+        app_rpush(dst);								/*将数据包中各数据单元压入相应目的地ID的缓冲区中*/                    	
 	}//end of for
 	return 0;
 }
@@ -500,14 +488,6 @@ PLAT_INT32 CAppInterface::AppRead()
   		/*对平台的数据源缓冲区中弹出的数据单元进行组包*/
 		//m_pei->Encoder(recv, uintBuf, j);                     
 	}
-
-	///*若数据源缓冲区不为空,将数据包写入指定的数据首地址处*/
-	//if(!len ==0)									
-	//{
-	//	//update index area data
-	//	m_pei->index.regionUnitNum = len;
-	//	memcpy(recv, &m_pei->index, sizeof(m_pei->index));
-	//}
 
 	platID = getPlatformID(srcID);         /*得到数据源对应的平台ID						*/        
 	sprintf(plat,"%08x",platID);

@@ -60,7 +60,7 @@
 
 
 //modify by ibm
-REDIS redis;
+REDIS redis = NULL;
 char charBuf[CHARSIZE];
 PLAT_UINT8 *uintBuf;
 char *wid;
@@ -564,13 +564,15 @@ static int cr_sendfandreceive(REDIS rhnd, char recvtype, const char *format, ...
 
 void credis_close(REDIS rhnd)
 {
-/*
-  if (rhnd->fd > 0)
-    close(rhnd->fd);*/
-  if (rhnd->fd > 0)
-  closesocket(rhnd->fd); 
-  cr_delete(rhnd);
-  WSACleanup(); 
+
+  //if (rhnd->fd > 0)
+  //  close(rhnd->fd);
+  if (rhnd->fd > 0) // has connected and init
+  {
+     closesocket(rhnd->fd); 
+  }
+   cr_delete(rhnd);
+   WSACleanup(); 
 }
 
 REDIS credis_connect(const char *host, int port, int timeout)
@@ -661,7 +663,7 @@ WSACleanup();
 
  error:
   if (fd > 0)
-    close(fd);
+    closesocket(fd);
   cr_delete(rhnd);
   return NULL;
 }
@@ -1232,7 +1234,8 @@ int app_zeroinit()
 
 int app_close()
 {
-	credis_close(redis);
+    if (redis != NULL)
+	 credis_close(redis);
 	return 0;
 }
 

@@ -66,6 +66,7 @@ private:
 	char src[IDSIZE];                 
 	char dst[IDSIZE];
 	char plat[IDSIZE];
+    //little package
 	PLAT_UINT8 uintBuf[SIZE];//save data from other terminal send me, the data from other termianl is big endian
     PLAT_UINT8 platBuf[SIZE];//save data in platform, the data is liitle endian for internal use
     

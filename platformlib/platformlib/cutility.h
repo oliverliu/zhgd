@@ -184,7 +184,6 @@ public:
 	bool updateNotifyTerminal( PLAT_UINT32 id, bool badd); 
 private:
 	std::list<PLAT_UINT32 > m_listTerminal;
-
 };
 
 #endif
