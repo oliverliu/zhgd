@@ -26,6 +26,7 @@ int main (int argc, char **argv)
         && server.bind(1086) 
         && server.listen())
     {
+        printf("Start waiting client...\n");
         server.procLoop(10);
     }
    

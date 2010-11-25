@@ -12,7 +12,6 @@ static char * logfile = "testAgent_log.txt";
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-   
     ZSocketClient client;
     if( client.init() < 0)
     {
