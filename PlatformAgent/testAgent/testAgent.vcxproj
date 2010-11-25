@@ -10,6 +10,9 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+<PropertyGroup>
+  <TrackFileAccess>false</TrackFileAccess>
+</PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{91DE3880-8B5D-46FC-B624-D3E61B4953EE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

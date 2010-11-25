@@ -10,10 +10,11 @@ ZRedis::ZRedis()
 
 ZRedis::~ZRedis()
 {
-     app_unInit();
+    //just only prevention program
+     disconnect();
 }
 
-int ZRedis::app_unInit()
+int ZRedis::disconnect()
 {
     if( m_pRedis != 0 )
     {
@@ -23,7 +24,7 @@ int ZRedis::app_unInit()
 	return 0;
 }
 
-int ZRedis::app_init( const char *host)
+int ZRedis::connect( const char *host)
 {
 	m_pRedis = credis_connect(host, 0, 10000);
 
@@ -81,6 +82,28 @@ int ZRedis::app_step(char *src)
 		return atoi(val);	
 	else 
 		return 0;
+}
+
+int ZRedis::app_rpush(int keyid, const PLAT_UINT8* content)
+{
+    char key[IDSIZE];
+    sprintf(key, "%08x", keyid);
+
+    return app_rpush(key,content);
+}
+
+int ZRedis::app_llen(int keyid) 
+{
+    char key[IDSIZE];
+    sprintf(key, "%08x", keyid);
+    return app_llen(key);
+}
+
+int ZRedis::app_lpop(int keyid, PLAT_UINT8* outbuf)
+{
+    char key[IDSIZE];
+    sprintf(key, "%08x", keyid);
+    return app_lpop(key,outbuf);
 }
 
 int ZRedis::app_rpush(char *key, const PLAT_UINT8* content)

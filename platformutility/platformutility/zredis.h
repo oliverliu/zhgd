@@ -19,15 +19,19 @@ public:
     ~ZRedis();
 
    /* init data buffer and credis */
-    int app_init(const char * host = 0);
+    int connect(const char * host = 0);
 
     /* close credis */
-    int app_unInit();
+    int disconnect();
   
     int app_rpush(char *key, const PLAT_UINT8 * content);
     int app_llen(const char *key);
     int app_lpop(const char *key, PLAT_UINT8* outbuf);
-   
+    
+    int app_rpush(int keyid, const PLAT_UINT8* content);
+    int app_llen(int keyid); 
+    int app_lpop(int keyid, PLAT_UINT8* outbuf);
+
     int app_run();
     
     int app_recv(char *key,PLAT_UINT8* outbuf);

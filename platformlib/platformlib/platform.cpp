@@ -102,7 +102,7 @@ PLAT_INT32 CAppInterface::AppInit()
 
     m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
 
-    m_pRedis->app_init(s_host);
+    m_pRedis->connect(s_host);
     //app_init(uintBuf,s_host);
 
 	return 0;
@@ -173,17 +173,17 @@ PLAT_INT32 CAppInterface::AppWrite()
 		{
 			dstID =(dstID&0x1000000F)|0x60000000;       //将目的地修改为ATP
 			sprintf(dst,"%08x",dstID);
-            m_pRedis->app_rpush(dst, uintBuf);
+            m_pRedis->app_rpush(dstID, uintBuf);
 			//app_rpush(dst);
 
 			dstID =(dstID&0x1000000F)|0x40000000;        //将目的地修改为ATO
 			sprintf(dst,"%08x",dstID);
-            m_pRedis->app_rpush(dst, uintBuf); 
+            m_pRedis->app_rpush(dstID, uintBuf); 
 		}
         else
         {
             /*将数据包中各数据单元压入相应目的地ID的缓冲区中*/   
-            m_pRedis->app_rpush(dst, uintBuf);   
+            m_pRedis->app_rpush(dstID, uintBuf);   
         }
 	}//end of for
 	return 0;
@@ -452,7 +452,8 @@ PLAT_INT32 CAppInterface::AppRead()
 	{
 		memset(&uintBuf, 0x00, SIZE);
 		/*将平台的数据源缓冲区中数据单元从缓冲区中弹出*/
-		 m_pRedis->app_lpop(src, uintBuf);			
+		// m_pRedis->app_lpop(src, uintBuf);	
+          m_pRedis->app_lpop(srcID, uintBuf);
 
 		if(CUtility::needSwap())
 		{

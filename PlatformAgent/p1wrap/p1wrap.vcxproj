@@ -45,13 +45,16 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\platformutility\platformutility;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>safe_protocol.lib</AdditionalDependencies>
+      <AdditionalDependencies>SafeProtocol.lib;platformutility.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Lib>
     <PostBuildEvent>
       <Command>copy "$(TargetDir)$(TargetFileName)"  ..\PlatformAgent
@@ -67,6 +70,7 @@ copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\platformutility\platformutility;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -78,16 +82,23 @@ copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
       <Command>copy "$(TargetDir)$(TargetFileName)"  ..\PlatformAgent
 copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
     </PostBuildEvent>
+    <Lib>
+      <AdditionalDependencies>SafeProtocol.lib;platformutility.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IniFile.h" />
     <ClInclude Include="safeSocket.h" />
     <ClInclude Include="safeStruct.h" />
     <ClInclude Include="zsocket.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="IniFile.cpp" />
     <ClCompile Include="zsocket.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
