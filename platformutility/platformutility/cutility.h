@@ -1,4 +1,3 @@
-
 #ifndef _CUTILITY_H
 #define _CUTILITY_H
 
@@ -15,6 +14,7 @@
 //#include "packetprocess.h"
 #pragma pack(1)																		/*设定为1字节对齐*/
 
+//#define _CRT_SECURE_NO_WARNINGS 
 // The output / input data for platform are big endian sequence
 // When enter our loop, transfer them to little endian and leave transfer them to big endian
 class CUtility

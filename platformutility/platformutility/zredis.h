@@ -19,7 +19,7 @@ public:
     ~ZRedis();
 
    /* init data buffer and credis */
-    int connect(const char * host = 0);
+    bool connect(const char * host = 0);
 
     /* close credis */
     int disconnect();

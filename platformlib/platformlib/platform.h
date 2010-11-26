@@ -17,6 +17,7 @@
 
 class  CZc;
 class  ZRedis;
+class  ZSocketClient;
 
 extern const char * g_fromTerminalLog;
 
@@ -43,7 +44,7 @@ private:
 
 	void write2PlatBuffer(PLAT_UBYTE*  ppack);
 	void updatePlatBuffer(PLAT_UBYTE*  ppack);
-	void initPackage(PLAT_UBYTE*  ppack, PLAT_UINT len, int type);//len is T_UNIT_HEADE.size
+	void initPackage(PLAT_UBYTE*  ppack, PLAT_UINT len, int type, int value);//len is T_UNIT_HEADE.size
 	void unInitPackage(PLAT_UBYTE* ppack);
 
 	void			newPackage(int type);
@@ -53,10 +54,10 @@ private:
 	void			OutputUint(PLAT_UINT8 * ,int);									/*数据包各单元数据打印函数*/
 
 private:															/*定义的平台包处理类的对象*/
-    ZRedis * m_pRedis;
-
-	PLAT_UINT8 *send;																/*平台接收的数据包的首地址*/
-	PLAT_UINT8 *recv;																/*平台接收的数据包的首地址*/
+    ZRedis*             m_pRedis;
+    ZSocketClient*      m_pSockClient;
+	PLAT_UINT8 *        send;																/*平台接收的数据包的首地址*/
+	PLAT_UINT8 *        recv;																/*平台接收的数据包的首地址*/
 	
 	static PLAT_UINT32 srcID;																/*保存数据源ID*/
 	PLAT_UINT32 dstID;																/*保存数据包各单元的目的地ID*/

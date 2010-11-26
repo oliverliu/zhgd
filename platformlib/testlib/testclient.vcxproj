@@ -10,9 +10,9 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-<PropertyGroup>
-  <TrackFileAccess>false</TrackFileAccess>
-</PropertyGroup>
+  <PropertyGroup>
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{090293E7-09D1-4974-AFCD-3BD49D5898A2}</ProjectGuid>
     <RootNamespace>testclient</RootNamespace>
@@ -59,7 +59,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>zc.lib;platformutility.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

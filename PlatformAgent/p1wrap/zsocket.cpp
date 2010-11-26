@@ -11,6 +11,7 @@
 #include <vector>
 using namespace std;
 
+static const char * s_dbip = "127.0.0.1";
 ZSocket::ZSocket() 
 {
     memset((char *) &m_connectionList, 0, sizeof(m_connectionList));
@@ -187,7 +188,7 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
 
 	if (errNumber == 0)
 	{
-		plog ("Error: select connection hasn't been established!\n");
+		plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
 		return -1;
 	}
 
@@ -265,11 +266,13 @@ bool ZSocket::addConnection(long longip,int sockid )
     {
         if (m_connectionList[i] == 0) 
         {
+            //printf("\nConnection accepted:   FD=%d; Slot=%d\n",sockid,i);
             plog("\nConnection accepted:   FD=%d; Slot=%d\n",sockid,i);
             m_connectionList[i] = sockid;
             m_mapLongIP2SockId.insert(pair<long,int>(longip, sockid) );
               
             plog("Connection: add to fd set, longip =%0x, ip=%s\n", longip, toString(longip).c_str());
+            //printf("Connection: add to fd longip =%0x, ip=%s\n", longip, toString(longip).c_str());
             bret = true;
             break;
          }
@@ -306,11 +309,14 @@ void ZSocket::handleNewConnection()
 bool ZSocket::connectDb()
 {
     m_pRedis = new ZRedis();
-    return m_pRedis->connect("127.0.0.1");
+    return m_pRedis->connect(s_dbip);
 }
+
+#define ASSERT_SOCKID(id) {if(id <= 0) return false;}
 
 bool ZSocket::canWrite(int sockId,int seconds )
 {
+    ASSERT_SOCKID(sockId);
     bool bret = false;
     TSafeSocket_FdSet set;
     SS_FD_ZERO (&set);
@@ -332,6 +338,7 @@ bool ZSocket::canWrite(int sockId,int seconds )
 
 bool ZSocket::canRead(int sockId,int seconds )
 {
+    ASSERT_SOCKID(sockId);
     bool bret = false;
     TSafeSocket_FdSet set;
     SS_FD_ZERO (&set);
@@ -551,14 +558,14 @@ int ZSocket::procTransferCtrl(const char * buffer)
     unsigned int did = 0;
     int byteSent = -1;
 
-    char msgLittleBuf[SIZE];
+    char msgLittleBuf[SIZE] = "\0";
     memcpy(msgLittleBuf, buffer + strlen(msghead),SIZE);
            
     s_packinfo pack;
     getPackinfo(pack,msgLittleBuf);
 
     //pop form db and send out
-    char popOutBuf[SIZE];
+    char popOutBuf[SIZE] = "\0";
     if(1)
          m_pRedis->app_lpop(pack.did,(unsigned char*)popOutBuf);
     else
@@ -569,7 +576,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
     }
 
     int sockidTo = getSockIDFromID(pack.did);
-    if (canWrite(sockidTo))
+    if (sockidTo > 0 && canWrite(sockidTo,3))
     {
         byteSent = write (sockidTo, msgLittleBuf, pack.size, SS_DATA_UNIMPORTANT);
         if (byteSent == SS_FAILED)
@@ -629,11 +636,13 @@ void ZSocket::dealWithData(	int listnum	)
         //get content
        if (isFromSelf(buffer)) //transfer them to other terminal
        {
+           plog("Transfer from self: true\n");
            if(isConnectCtrl(buffer))
            {
+              plog("Transfer connect: true\n");
               int ret = procConnectCtrl(buffer);
               string str = ret != -1 ? "true" : "false";
-              if (canWrite(sockId))
+              if (canWrite(sockId,3))
               {
                 int len = write(sockId,str.c_str(), str.length(), SS_DATA_UNIMPORTANT);
                 if ( len > 0)
@@ -641,10 +650,15 @@ void ZSocket::dealWithData(	int listnum	)
                 else
                     plog("Response Failed: write failed, the content = %s\n", str.c_str());
               }
+              else
+              {
+                  plog("Failed: write sockid.\n");
+              }
            }
 
            else if(isDisconnectCtrl(buffer))
            {
+              plog("Transfer disconnect: true\n");
               int ret = procDisconnectCtrl(buffer);
               string str = ret != -1 ? "true" : "false";
               if (canWrite(sockId))
@@ -655,16 +669,22 @@ void ZSocket::dealWithData(	int listnum	)
                   else
                     plog("Response Failed: write failed, the content = %s\n", str.c_str());
               }
+              else
+              {
+                  plog("Failed: write sockid.\n");
+              }
            }
 
            else if(isTransferCtrl(buffer))
            {
+               plog("Transfer data: true\n");
                int len = procTransferCtrl(buffer);
                plog("Transfer data: length = %d\n", len);
            }
        }
        else //from other terminal to me. push back
        {
+           plog("Transfer from other: true\n");
            s_packinfo pack;
            getPackinfo(pack,buffer);
 
@@ -776,50 +796,88 @@ bool ZSocketClient::init()
     bool bret = false;
     if (connectDb())
     {
-        m_sockId = connectServer("127.0.0.1");
+        m_sockId = ZSocket::connectServer("127.0.0.1");
         if ( m_sockId <= 0)
         {
             bret = false;
-            printf("Failed: connect server\n");
+            plog("Failed: connect server\n");
         }
         else
         {
             bret = true;
-            printf("m_sockId=%d\n", m_sockId );
+            plog("m_sockId=%d\n", m_sockId );
         }
     }
     return bret;
 }
 
-int ZSocketClient::transferTerminal(const char* littlepack)
+int ZSocketClient::connectServer(const char *ip,int port, int timeout)
+{
+    m_sockId = ZSocket::connectServer(ip,port,timeout);
+    return m_sockId;
+}
+
+// transfer data by parameter did not the did in littlepack
+int ZSocketClient::transferTerminal(const unsigned int did, const char* littlepack)
 {
     if ( canWrite(m_sockId,3))
     {
-        printf("Msg type: transfer are sent\n");
-           
-        int len = sendTransfer(m_sockId,littlepack, sizeof(littlepack),0);
+        //printf("Msg type: transfer are sent\n");
+        //
+        //int flag = 0;
+        //int len = sendTransfer(m_sockId,littlepack, strlen(littlepack),flag);
+        //if( len <=0 )
+        //{
+        //    int errNumber = safeSocket_getErrorNum (m_sockId);
+        //    printf ("data failed to be sent, errNumber = %u\n", errNumber);
+        //    return -1;
+        //}
+        //else
+        //{
+        //    printf("Result: send transfer bytes = %d\n", len);
+        //    return len;
+        //}
+    }
+    return -1;
+}
+
+int ZSocketClient::transferTerminal(const char* littlepack)
+{
+    plog("Terminal: transfer\n");
+    if ( canWrite(m_sockId,3))
+    {
+        plog("Msg type: transfer are sent\n");
+        
+        int flag = 0;
+        int len = sendTransfer(m_sockId,littlepack, strlen(littlepack),flag);
         if( len <=0 )
         {
             int errNumber = safeSocket_getErrorNum (m_sockId);
-            printf ("data failed to be sent, errNumber = %u\n", errNumber);
+            plog ("data failed to be sent, errNumber = %u\n", errNumber);
             return -1;
         }
         else
         {
-            printf("Result: send transfer bytes = %d\n", len);
+            plog("Result: send transfer bytes = %d\n", len);
             return len;
         }
+    }
+    else
+    {
+        plog("Failed: write sock\n");
     }
     return -1;
 }
            
 int ZSocketClient::disconnectTermianl(int did)
 {
+    plog("Terminal: disconnect\n");
     return connectTerminalInterl(did,false);
 }
 
 int ZSocketClient::connectTermianl(int did)
 {
+    plog("Terminal: connect\n");
     return connectTerminalInterl(did,true);
 }
 
@@ -829,7 +887,6 @@ int ZSocketClient::connectTermianl(int did)
 // 1: control succssful
 int ZSocketClient::connectTerminalInterl(int did, bool bconnect)
 {
-    
     int flag;
     if ( canWrite(m_sockId,3))
     {
@@ -844,13 +901,18 @@ int ZSocketClient::connectTerminalInterl(int did, bool bconnect)
         if( len <=0 )
         {
             int errNumber = safeSocket_getErrorNum (m_sockId);
-            printf ("data failed to be sent, errNumber = %u\n", errNumber);
+            plog ("data failed to be sent, errNumber = %u\n", errNumber);
             return -1;
         }
         else
         {
-            printf("Result: send connect control bytes = %d, createConnect=%d\n", len, bconnect);
+            plog("Result: send connect control bytes = %d, createConnect=%d\n", len, bconnect);
         }
+    }
+    else
+    {
+        plog("Failed: write socket.\n");
+        return -1;
     }
    
     //wait response, get connect result
@@ -861,19 +923,19 @@ int ZSocketClient::connectTerminalInterl(int did, bool bconnect)
         if( len <=0 )
         {
             int errNumber = safeSocket_getErrorNum (m_sockId);
-            printf("GetResponse Failed: read error! errNumber = %d\n", errNumber);//connect = %s len = %d\n", buf,len);
+            plog("GetResponse Failed: read error! errNumber = %d\n", errNumber);//connect = %s len = %d\n", buf,len);
           
             return -1;
         }
 
         string retval = string(buf);
         int ret = retval == string("true") ? 1 : 0;
-        printf("GetResponse: content = %s len = %d, retval = %d\n", buf,len,ret);
+        plog("GetResponse: content = %s len = %d, retval = %d\n", buf,len,ret);
         return ret;
     }
     else
     {
-        printf("GetResponse NOT: socket connect can not read.\n");
+        plog("Failed: read socket.\n");
         return -1;
     }
 }

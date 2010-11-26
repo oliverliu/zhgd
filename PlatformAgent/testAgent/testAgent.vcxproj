@@ -10,9 +10,9 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-<PropertyGroup>
-  <TrackFileAccess>false</TrackFileAccess>
-</PropertyGroup>
+  <PropertyGroup>
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{91DE3880-8B5D-46FC-B624-D3E61B4953EE}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -61,7 +61,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\PlatformAgent</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ws2_32.lib;p1wrap.lib;platformutility.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;p1wrap.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

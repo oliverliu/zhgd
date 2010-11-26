@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "platformlib", "platformlib\platformlib.vcxproj", "{FBFA289D-867B-4C00-BCD4-5613A3DB870B}"
 	ProjectSection(ProjectDependencies) = postProject
-		{1D794463-CEDB-4C57-B3A7-060A146B08EB} = {1D794463-CEDB-4C57-B3A7-060A146B08EB}
+		{18977B50-31E4-4F29-9F45-87C2ED8C9DCA} = {18977B50-31E4-4F29-9F45-87C2ED8C9DCA}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "platformutility", "platformutility", "{06F555B6-F884-4EE5-8467-27D5F67F78BB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testclient", "testlib\testclient.vcxproj", "{090293E7-09D1-4974-AFCD-3BD49D5898A2}"
 	ProjectSection(ProjectDependencies) = postProject
-		{1D794463-CEDB-4C57-B3A7-060A146B08EB} = {1D794463-CEDB-4C57-B3A7-060A146B08EB}
+		{FBFA289D-867B-4C00-BCD4-5613A3DB870B} = {FBFA289D-867B-4C00-BCD4-5613A3DB870B}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "platformutility", "..\platformutility\platformutility\platformutility.vcxproj", "{1D794463-CEDB-4C57-B3A7-060A146B08EB}"

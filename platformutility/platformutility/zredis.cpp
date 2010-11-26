@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+//#define _CRT_SECURE_NO_WARNINGS 
+
 ZRedis::ZRedis()
 {
     m_pRedis = 0;
@@ -24,12 +26,12 @@ int ZRedis::disconnect()
 	return 0;
 }
 
-int ZRedis::connect( const char *host)
+bool ZRedis::connect( const char *host)
 {
 	m_pRedis = credis_connect(host, 0, 10000);
 
 	memset(m_charBuf,'\0',CHARSIZE);
-	return m_pRedis != NULL ? 1 : 0;
+	return m_pRedis != NULL ? true : false;
 }
 
 int ZRedis::app_run()

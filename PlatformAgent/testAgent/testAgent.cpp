@@ -13,15 +13,24 @@ static char * logfile = "testAgent_log.txt";
 int _tmain(int argc, _TCHAR* argv[])
 {
     ZSocketClient client;
-    if( client.init() < 0)
+    bool bret = false;
+    if (client.connectDb() < 0)
     {
-        printf("FAiled: Socket client init\n");
+        printf("Failed: Connect db\n");
+        return -1;
     }
-    int ret =  client.connectTermianl(0x12);
+
+    if( client.connectServer("127.0.0.1") < 0)
+    {
+        printf("FAiled: Socket client connect agent server\n");
+    }
+
+    int ret =  client.connectTermianl(0x20000002);
     
     ret =  client.disconnectTermianl(2);
 
-    ret =  client.transferTerminal("Abc");
+    ret =  client.transferTerminal("Absdsddddddddddddfsdfasdfc");
+    ret =  client.transferTerminal("A000bsdsdddddddd ddddfsdfasdfc");
 
     getchar();
 

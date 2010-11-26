@@ -21,7 +21,7 @@ int main (int argc, char **argv)
     server.setLog();
 
     bool bdb = server.connectDb();
- 
+
     if ( bdb && server.create() != -1
         && server.bind(1086) 
         && server.listen())

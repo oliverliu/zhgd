@@ -10,7 +10,6 @@
  * Description: for platform simulator network layer
  */
 #include "safeSocket.h"
-class ZRedis;
 
 #include <string>
 #include <map>
@@ -25,7 +24,7 @@ typedef struct _packinfo
     unsigned int size;
 }s_packinfo;
 
-
+class ZRedis;
 class ZSocket
 {
 public:
@@ -35,7 +34,7 @@ public:
     //client
     //return sockect id, connect ip
     int getWriteSocket(const char *ip,int port = 1086, int timeout = -1);//until connect successful return, for client
-    int connectServer(const char *ip,int port = 1086, int timeout = -1);
+    virtual int connectServer(const char *ip,int port = 1086, int timeout = -1);
    
     int sendConnect(int sockid, const char* data, int size, int flag);
     int sendDisConnect(int sockid, const char* data, int size, int flag);
@@ -63,6 +62,9 @@ public:
     //debug
     void setLog(const char* file = NULL);
  
+protected:
+    void plog(const char* format, ...);
+
 private:
     int  connect(int sockid, int _port, const char *ip,int timeout = -1);
 
@@ -74,7 +76,7 @@ private:
 	void readSocks();
 	void handleNewConnection();
     void dealWithData(int listnum);
-	void plog(const char* format, ...);
+	
 
     
     std::string getIPFromID(int id);
@@ -114,9 +116,11 @@ class ZSocketClient : public ZSocket
 public:
     ZSocketClient();
     ~ZSocketClient();
-    
+
+    int connectServer(const char *ip,int port = 1086, int timeout = -1);
     bool init();
-    int transferTerminal(const char* littlepack);
+    int transferTerminal(const char* littlepack);//the did can be gotten from littlepack
+    int transferTerminal(const unsigned int did, const char* littlepack);
     int disconnectTermianl(int did);
     int connectTermianl(int did);
 

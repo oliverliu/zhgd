@@ -1,15 +1,17 @@
-#include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <stdio.h>
-#include "platform.h"
-#include "credis.h"
-#include "globle.h"
+#include <stdarg.h>
+
+#include "zsocket.h"
 #include "wintimer.h"
+#include "platform.h"
 #include "cutility.h"
-#include "packetprocess.h"
 #include "zredis.h"
 
-#include <stdarg.h>
+
+
+
 int msglevel = 3; /* the higher, the more messages... */
 
 #if defined(NDEBUG) && defined(__GNUC__)
@@ -46,16 +48,19 @@ PLAT_UBYTE APP_READ_ADDR[NETSIZE];
 PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];
 const char * g_fromTerminalLog = "fromTerminalLog.txt";
 
-const char * s_host = "192.168.20.100";
+//const char * s_host = "192.168.20.100";
+static const char* s_dbip = "127.0.0.1";
 
 CAppInterface::CAppInterface()
 {
 	m_pzc = new CZc();
 	//m_pei = new packetprocess();
     m_pRedis = new ZRedis();
+    m_pSockClient = new  ZSocketClient();
+    m_pSockClient->setLog("agent_client.log");
 
 	m_fpFromTerminalLog = NULL;
-	m_fpFromTerminalLog = fopen(g_fromTerminalLog, "w");
+	int ret = fopen_s(&m_fpFromTerminalLog,g_fromTerminalLog, "w");
     fclose(m_fpFromTerminalLog);
 
 	InitSrcId();
@@ -63,6 +68,12 @@ CAppInterface::CAppInterface()
 
 CAppInterface::~CAppInterface()
 {
+    if (m_pSockClient)
+    {
+        delete m_pSockClient;
+        m_pSockClient = NULL;
+    }
+
      if ( m_pRedis )
      {
          delete m_pRedis;
@@ -100,9 +111,16 @@ PLAT_INT32 CAppInterface::AppInit()
 	CUtility::initBigPackIdx(recv);
 	CUtility::initBigPackIdx(platBuf);
 
-    m_fpFromTerminalLog = fopen(g_fromTerminalLog, "a+");
+    int err = fopen_s(&m_fpFromTerminalLog, g_fromTerminalLog, "a+");
 
-    m_pRedis->connect(s_host);
+    m_pRedis->connect(s_dbip);
+
+    if( m_pSockClient->connectServer("127.0.0.1") < 0)
+    {
+        printf("Failed: Socket client connect agent server\n");
+    }
+
+
     //app_init(uintBuf,s_host);
 
 	return 0;
@@ -143,7 +161,8 @@ PLAT_INT32 CAppInterface::AppWrite()
 		PLAT_UBYTE *p = CUtility::getUnitHead(send, 0);
 		srcID = CUtility::getLittlePackSID(p);
 	}   
-	sprintf(src, "%08x", srcID);	
+	//sprintf(src, "%08x", srcID);	
+    sprintf_s(src, "%08x", srcID);	
 
 
 	int count = CUtility::getUnitCounts(send);
@@ -155,14 +174,44 @@ PLAT_INT32 CAppInterface::AppWrite()
 		memcpy(uintBuf, addr, CUtility::getLittlePackSize(addr) );//include msg header
 
 		dstID = CUtility::getLittlePackDID(addr);
-		sprintf(dst,"%08x",dstID);
+		sprintf_s(dst,"%08x",dstID);
 		
         //maybe update data in platform buffer  where the data is little endian
-		procMsgOut(uintBuf);
-		procConnectControl(uintBuf);
-		procBroadMsg(uintBuf);
-		procInputAppStatus(uintBuf);
+        CLittlePack parser(srcID, uintBuf);
+	    if (parser.isMsgOut())
+        {
+            // msg status changed from out to in, 
+            // for value its vaule from 5 to 10
+		    procMsgOut(uintBuf);//need transfer it
 
+            if (CUtility::needSwap())
+		    {
+			    //little to big endian for output to db
+                CUtility::littlePackToBE(uintBuf);
+		    }
+            m_pRedis->app_rpush(dstID, uintBuf);   
+            m_pSockClient->transferTerminal((const char*) uintBuf);
+        }
+        else if (parser.isConnectControl())
+        {
+            //not need transfer
+            // connect / disconnet did, and recode result into platform buffer
+		    procConnectControl(uintBuf); 
+        }
+        else if (parser.isBroad()) // not supported for now temporary.
+        {
+            //need transfer, DID process need specially process.
+            // from message, DID can not be gotten, it always ffff for broadcast.
+            // so need parameter DID that means msg format is selftransfer+did+msg content.
+		    procBroadMsg(uintBuf);
+        }
+        else if (parser.isInputAppStatus())
+        {
+            //just only recode it into platform buffer
+            procInputAppStatus(uintBuf);//not need transfer
+        }
+
+        //other type message
 		if (CUtility::needSwap())
 		{
 			//little to big endian for output to db
@@ -172,18 +221,20 @@ PLAT_INT32 CAppInterface::AppWrite()
 		if((dstID&0x00000FF0)==0x00000FF0)				//说明目的地为CC，此时应该将对应的ATP和ATO中同时压入内容
 		{
 			dstID =(dstID&0x1000000F)|0x60000000;       //将目的地修改为ATP
-			sprintf(dst,"%08x",dstID);
+			//sprintf(dst,"%08x",dstID);
             m_pRedis->app_rpush(dstID, uintBuf);
 			//app_rpush(dst);
 
 			dstID =(dstID&0x1000000F)|0x40000000;        //将目的地修改为ATO
-			sprintf(dst,"%08x",dstID);
+			//sprintf(dst,"%08x",dstID);
             m_pRedis->app_rpush(dstID, uintBuf); 
+            m_pSockClient->transferTerminal((const char*) uintBuf);
 		}
         else
         {
             /*将数据包中各数据单元压入相应目的地ID的缓冲区中*/   
-            m_pRedis->app_rpush(dstID, uintBuf);   
+            m_pRedis->app_rpush(dstID, uintBuf); 
+            m_pSockClient->transferTerminal((const char*) uintBuf);
         }
 	}//end of for
 	return 0;
@@ -238,7 +289,7 @@ void CAppInterface::unInitPackage(PLAT_UBYTE* _ppack)
 }
 
 //init unit package
-void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
+void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type, int value)
 {
 	T_UNIT* ppack = (T_UNIT*) _ppack;
 	ppack->unitSize = len;
@@ -251,11 +302,11 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = 0;
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
-			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x23); //0x23
+			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,value); //0x23
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 			
 			ppack->unitId = ppack->unitId;
-			*(ppack->unitData) = 0x23;
+			*(ppack->unitData) = value;
 		}	
 		break;
 	case 1: //remove connect
@@ -263,11 +314,11 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT len, int type)
 			ppack->unitId = 0;
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
-			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,0x20); //0x20
+			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,value); //0x20
 			ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 
 			ppack->unitId = ppack->unitId;
-			*(ppack->unitData) = 0x20;
+			*(ppack->unitData) = value;
 		}
 		break;
 	default:
@@ -306,7 +357,7 @@ void CAppInterface::updatePlatBuffer(PLAT_UBYTE*  ppack)
 void CAppInterface::procInputAppStatus(PLAT_UBYTE* p)
 {
 	CLittlePack parser(srcID, p);
-	if (parser.isInputAppStatus())
+	//if (parser.isInputAppStatus())
 	{
 		//recode input app status into platform buffer
 		CUtility::pushBackPack(platBuf, p);
@@ -317,7 +368,7 @@ void CAppInterface::procInputAppStatus(PLAT_UBYTE* p)
 void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 {
 	CLittlePack parser(srcID, p);
-	if (parser.isMsgOut())
+	//if (parser.isMsgOut())
 	{
 		PLAT_UINT32 val = CUtility::setBitsVal(parser.getUnitID(), 24,29, 5);//0000110
 		parser.updateUID(val);
@@ -329,7 +380,7 @@ void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 {
 	CLittlePack parser(srcID, p);
-	if (parser.isConnectControl())
+//  if (parser.isConnectControl())
 	{
 		PLAT_UINT32 dstID = parser.getDstID();
 
@@ -340,6 +391,8 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 			{
 				printf("Connect Add\n");
 				//create connect command
+                int ret = 0;//m_pSockClient->connectTermianl(dstID);
+
 
 				//update states to platform buffer
 				//content shoule be big-endian
@@ -352,7 +405,9 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 					printf("Warning: Create Add failed!");
 					return;
 				}
-				initPackage(pack,len, 0);
+				initPackage(pack,len, 0,ret);
+                //update connect control
+                //updatePackage(pack, ret);
 				write2PlatBuffer(pack);
 				//unInitPackage((PLAT_UBYTE*)&pack);
 				
@@ -363,6 +418,7 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 		case 0x11:
 			{
 				printf("Connect Remove\n");
+                int ret = 0 ;//m_pSockClient->disconnectTermianl(dstID);
 
 				//update states to platform buffer
 				PLAT_UBYTE pack[1024];
@@ -373,7 +429,9 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 					printf("Warning: Create Remove failed!\n");
 					return;
 				}
-				initPackage(pack,len, 1);
+				initPackage(pack,len, 1,ret);
+                //update connect control
+                //updatePackage(pack, ret);
 				write2PlatBuffer(pack);
 				//unInitPackage((PLAT_UBYTE*)&pack);
 
@@ -391,7 +449,7 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
 {
 	CLittlePack parser(srcID, p);
 	
-	if (parser.isBroad())
+	//if (parser.isBroad())
 	{
 		std::list<PLAT_UINT32> dstIDlist = m_pzc->getNotifyTerminals();
 		std::list<PLAT_UINT32>::iterator it;
@@ -401,11 +459,22 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
 			memset(&uintBuf, 0x00, SIZE);
 
 			PLAT_UINT32 len = CUtility::getLittlePackSize(p);
+            PLAT_UINT32 did = CUtility::getLittlePackDID(p); //should equal to ffff
+            if (CUtility::needSwap())
+		    {
+			    //little to big endian for output to db
+                CUtility::littlePackToBE(p);
+		    }
+
 			memcpy(&uintBuf, p, len );
 
 			char tmp[IDSIZE];
-			sprintf(dst,"%08x",*it);
+			sprintf_s(dst,"%08x",*it);
 			m_pRedis->app_rpush(tmp, uintBuf);	
+
+            //transfer it, broadcast message DID can not gotten from little packe 
+            // which DID is ffff
+            m_pSockClient->transferTerminal(*it, (const char*) p); 
 		}
 	}
 }
@@ -437,11 +506,11 @@ PLAT_INT32 CAppInterface::AppRead()
 		return 0;
 	else
 	{
-		sprintf(src, "%08x", srcID);
+		sprintf_s(src, "%08x", srcID);
 	}
 
 	char srccc[11];
-	sprintf(srccc,"%s",src);
+	sprintf_s(srccc,"%s",src);
 	while((m_pRedis->app_run() >0) && (m_pRedis->app_step(srccc) ==0))
 	{
 		PlatformSleep(10);							/*休眠10ms*/      
@@ -467,13 +536,13 @@ PLAT_INT32 CAppInterface::AppRead()
 	}
 
 	platID = getPlatformID(srcID);         /*得到数据源对应的平台ID						*/        
-	sprintf(plat,"%08x",platID);
+	sprintf_s(plat,"%08x",platID);
 
 	//------------------------------
 	//get platform data for read
 	//read little package from platform buffer and push little package to big package
 	PLAT_UINT32 unitCounts = CUtility::getUnitCounts(platBuf);
-	for (int idx = 0; idx < unitCounts; idx++)
+	for (unsigned int idx = 0; idx < unitCounts; idx++)
 	{
 		PLAT_UBYTE * p = CUtility::getUnitHead(platBuf, idx);
 		CUtility::pushBackPack(recv, p);

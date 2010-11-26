@@ -671,7 +671,7 @@ PLAT_UINT32 CLittlePack::dataType() const
 	//return m_header.unitId & 0x3F000000; 
 }
 
-//1010
+//1010= 0xa
 bool CLittlePack::isMsgOut() const
 {
 	return dataType() == 0xa ? true : false;

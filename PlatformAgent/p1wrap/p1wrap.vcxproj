@@ -58,7 +58,8 @@
     </Lib>
     <PostBuildEvent>
       <Command>copy "$(TargetDir)$(TargetFileName)"  ..\PlatformAgent
-copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
+copy "$(TargetDir)$(TargetFileName)"  ..\testAgent
+copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -80,7 +81,8 @@ copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetDir)$(TargetFileName)"  ..\PlatformAgent
-copy "$(TargetDir)$(TargetFileName)"  ..\testAgent</Command>
+copy "$(TargetDir)$(TargetFileName)"  ..\testAgent
+copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib</Command>
     </PostBuildEvent>
     <Lib>
       <AdditionalDependencies>SafeProtocol.lib;platformutility.lib;</AdditionalDependencies>
