@@ -1,6 +1,6 @@
 // Definition of the ZSocket class
-#ifndef Z_ZSocket_CLASS
-#define Z_ZSocket_CLASS
+#ifndef Z_ZSOCKET_CLASS
+#define Z_ZSOCKET_CLASS
 
 /* (C) COPYRIGHT 2010 BY ZHEDAWANGXIN CORPORATION ALL RIGHTS RESERVED
  * Create Data: 2010-11-15
@@ -8,17 +8,18 @@
  * Author: Liuning
  * Contact: liuning@zdwxgd.com
  * Description: for platform simulator network layer
+ *   * Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
  */
-#include "safeSocket.h"
-
 #include <string>
 #include <map>
+#include "safeSocket.h"
 
-#define MAX_CNT_COUNT 1024
+const int MAX_CNT_COUNT=1024;
 
 typedef struct _packinfo
 {
-    unsigned int datetype;
+    unsigned int datatype;
     unsigned int sid;
     unsigned int did ;
     unsigned int size;
@@ -40,22 +41,21 @@ public:
     int sendDisConnect(int sockid, const char* data, int size, int flag);
     int sendTransfer(int sockid, const char* data, int size, int flag);
 
-
     int disconnectServer(char* ip);
     int disconnectServer(int did);
 	
-    //server
-    bool connectDb();
-    int create();
+    //server 
+    //Successful: 1; failed: 0
+    int  connectDb(); 
+    int  create();
     bool bind(int port,const char* ip = NULL);
     bool listen();
-   
-
+  
     bool initServer(int port); //just only for invoke conveniencely.
     void  procLoop(int timeoutSeconds = -1);//default is wait forever
 
     int write(int id, const char* data, int byteRead, int flag);
-    int read(int sockfd, void *buf, size_t len, int *pflags);
+    int read(int sockfd, void *buf, size_t len, int pflags);
 
     bool canWrite(int sockId,int seconds = -1);
     bool canRead(int sockId, int seconds = -1);
@@ -64,6 +64,7 @@ public:
  
 protected:
     void plog(const char* format, ...);
+    void outputLittlepack(const unsigned char * buffer);
 
 private:
     int  connect(int sockid, int _port, const char *ip,int timeout = -1);
@@ -80,7 +81,9 @@ private:
 
     
     std::string getIPFromID(int id);
+    std::string getIPFromSockID(int sockid);
     int  getSockIDFromID(int id);
+     
     void initIDIP();
     bool isFromSelf(const char * buffer);// the msg send by host client,such as connect, disconnect or transfer
     void getPackinfo(struct _packinfo& packinfo, char* buffer);

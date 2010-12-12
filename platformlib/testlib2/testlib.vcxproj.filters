@@ -16,9 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
-    <None Include="C:\Users\oliverliu\Desktop\lat\zeromq-2.0.7\builds\msvc\msvc.sln">
-      <Filter>Resource Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -32,7 +29,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="testAgent.cpp">
+    <ClCompile Include="testlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

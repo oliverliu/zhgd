@@ -15,6 +15,9 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>platformutility</RootNamespace>
   </PropertyGroup>
+  <PropertyGroup>
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -44,7 +47,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;Q_WS_WIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -86,18 +89,22 @@ copy "$(TargetDir)$(TargetFileName)"  ..\..\PlatformAgent\p1wrap</Command>
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="credis.c" />
-    <ClCompile Include="cutility.cpp" />
-    <ClCompile Include="wintimer.cpp" />
-    <ClCompile Include="zredis.cpp" />
+    <ClCompile Include="src\credisv2.c" />
+    <ClCompile Include="src\cutility.cpp" />
+    <ClCompile Include="src\ini.c" />
+    <ClCompile Include="src\INIReader.cpp" />
+    <ClCompile Include="src\wintimer.cpp" />
+    <ClCompile Include="src\zredis.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="credis.h" />
-    <ClInclude Include="cutility.h" />
-    <ClInclude Include="InterfaceDataStruct.h" />
-    <ClInclude Include="platformhead.h" />
-    <ClInclude Include="wintimer.h" />
-    <ClInclude Include="zredis.h" />
+    <ClInclude Include="src\credisv2.h" />
+    <ClInclude Include="src\cutility.h" />
+    <ClInclude Include="src\ini.h" />
+    <ClInclude Include="src\INIReader.h" />
+    <ClInclude Include="src\platformhead.h" />
+    <ClInclude Include="src\tpackage.h" />
+    <ClInclude Include="src\wintimer.h" />
+    <ClInclude Include="src\zredis.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

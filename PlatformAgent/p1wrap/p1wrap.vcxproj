@@ -10,6 +10,9 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup>
+    <TrackFileAccess>false</TrackFileAccess>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{18977B50-31E4-4F29-9F45-87C2ED8C9DCA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -44,22 +47,25 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\platformutility\platformutility;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDLL;Q_WS_WIN;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\platformutility\platformutility\src;</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>SafeProtocol.lib;platformutility.lib;</AdditionalDependencies>
+      <AdditionalDependencies>SafeProtocol.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Lib>
     <PostBuildEvent>
       <Command>copy "$(TargetDir)$(TargetFileName)"  ..\PlatformAgent
 copy "$(TargetDir)$(TargetFileName)"  ..\testAgent
-copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib</Command>
+copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib
+copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\testlib2</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -94,13 +100,26 @@ copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib</Command>
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IniFile.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\credisv2.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\cutility.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\ini.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\INIReader.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\platformhead.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\tpackage.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\wintimer.h" />
+    <ClInclude Include="..\..\platformutility\platformutility\src\zredis.h" />
+    <ClInclude Include="platform.h" />
     <ClInclude Include="safeSocket.h" />
     <ClInclude Include="safeStruct.h" />
     <ClInclude Include="zsocket.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IniFile.cpp" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\credisv2.c" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\cutility.cpp" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\ini.c" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\INIReader.cpp" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\wintimer.cpp" />
+    <ClCompile Include="..\..\platformutility\platformutility\src\zredis.cpp" />
     <ClCompile Include="zsocket.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

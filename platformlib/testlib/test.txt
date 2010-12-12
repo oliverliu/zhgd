@@ -1,0 +1,17 @@
+
+
+Test NO.0
+READ: 
+package has 4 unit
+NO. 0 package: unitId = ffaa00ff, unitSize = 20, data:
+ff  00  aa  ff  14  00  00  00  aa  00  00  00  01  00  00  60  01  00  00  20  00  00  00  00  00  00  00  00  
+NO. 1 package: unitId = 465500ff, unitSize = 20, data:
+ff  00  55  46  14  00  00  00  55  00  00  00  01  00  00  60  01  00  00  20  00  00  00  00  00  00  00  00  
+NO. 2 package: unitId = ffaa00ff, unitSize = 20, data:
+ff  00  aa  ff  14  00  00  00  aa  00  00  00  01  00  00  60  01  00  00  20  00  00  00  00  00  00  00  00  
+NO. 3 package: unitId = ffaa00ff, unitSize = 20, data:
+ff  00  aa  ff  14  00  00  00  aa  00  00  00  01  00  00  60  01  00  00  20  00  00  00  00  00  00  00  00  
+Write: 
+package has 1 unit
+NO. 0 package: unitId = 4baa1234, unitSize = 20, data:
+34  12  aa  4b  14  00  00  00  10  00  00  00  01  00  00  60  01  00  00  20  00  00  00  00  00  00  00  00  

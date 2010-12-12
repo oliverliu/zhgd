@@ -10,8 +10,76 @@ using namespace std;
 
 static char * logfile = "testAgent_log.txt";
 
+
+int connect1025Server_1(int port,int seconds)
+{
+    if (safeSocket_startSocket(NULL) == -1)
+	{
+        printf ("safe socket failed to be started!\n");
+		return 0;
+	}
+    /* create safe socket */
+	int safeSockID = safeSocket_socket (SS_PROTOCOL_UDP, SS_WITHCONNECTION);
+	if (safeSockID == SS_FAILED)
+	{
+		printf ("safeSockID failed to be created!\n");
+		return 0;
+	}
+
+	SOCKADDR_IN  serverAddr;
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(1086);
+	serverAddr.sin_addr.S_un.S_addr = inet_addr ("127.0.0.1");
+
+	/* add safeSock to except set */
+	TSafeSocket_FdSet  exceptSet,readSet, writeSet;
+	SS_FD_ZERO (& exceptSet);
+    SS_FD_ZERO (& readSet);
+    SS_FD_ZERO (& writeSet);
+	SS_FD_SET (safeSockID, & exceptSet);
+    SS_FD_SET (safeSockID, & readSet);
+    SS_FD_SET (safeSockID, & writeSet);
+
+	/* connect to server */
+	if (safeSocket_connect (safeSockID, (const SOCKADDR *) & serverAddr, sizeof (SOCKADDR)) == SS_FAILED)
+	{
+	   int errNumber = safeSocket_getErrorNum (safeSockID);
+	   printf("connect failed, errNumber = %u\n", errNumber);
+
+	   return 0;
+	}
+
+    struct timeval timeout;
+    timeout.tv_sec = seconds;//3s
+    timeout.tv_usec = 0;
+    
+    int  errNumber ;
+    if ( seconds > 0)
+        errNumber = safeSocket_select(0, NULL,NULL, &exceptSet,&timeout);
+    else
+        errNumber = safeSocket_select (0, NULL,NULL, &exceptSet, NULL);
+
+	///* wait until connection has established */
+	//int errNumber = safeSocket_select (0, NULL, NULL, & exceptSet, NULL);
+	if (errNumber == 0)
+	{
+         int errNumber = safeSocket_getErrorNum (safeSockID);
+		printf ("select error: connection hasn't been established!\n");
+		return 0;
+	}
+    return errNumber;
+}
+
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+       //if( client.connect1025Server_1(1087,3) < 0)
+    //if( connect1025Server_1(1086,3) == 0)
+    //{
+    //    printf("FAiled: Socket client connect agent server\n");
+    //}
+    //
+     
     ZSocketClient client;
     bool bret = false;
     if (client.connectDb() < 0)
@@ -20,18 +88,32 @@ int _tmain(int argc, _TCHAR* argv[])
         return -1;
     }
 
-    if( client.connectServer("127.0.0.1") < 0)
+    /*if( client.connectServer("127.0.0.1",1087,3) < 0)
     {
         printf("FAiled: Socket client connect agent server\n");
-    }
-
-    int ret =  client.connectTermianl(0x20000002);
+    } 
+    */
+    //debug
+    if( client.connectServer("127.0.0.1",1086,3) < 0)
+    { 
+        printf("FAiled: Socket client connect agent server\n"); 
+        getchar(); 
+        return 0; 
+    } 
+    //if( client.connect1025Server_1(1087,3) < 0)
+    //  //if( connect1025Server_1(1087,3) == 0) 
+    //  {
+    //       printf("FAiled: Socket client connect agent server\n");
+    //  } 
+    //
+    int ret =  client.connectTermianl(0x20000002); 
     
-    ret =  client.disconnectTermianl(2);
-
+    //ret =  client.disconnectTermianl(2);
+    
     ret =  client.transferTerminal("Absdsddddddddddddfsdfasdfc");
     ret =  client.transferTerminal("A000bsdsdddddddd ddddfsdfasdfc");
 
+    printf("getchar to quit\n"); 
     getchar();
 
     return 0;

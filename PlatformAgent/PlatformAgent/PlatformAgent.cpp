@@ -1,14 +1,16 @@
 // PlatformAgent.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
+
+//#include "zredis.h"
 #include "zsocket.h"
 
-#include "zredis.h"
+
 
 void invokeProc()
 {
-    //system("redis-server.exe &");
+    //system("redis-server.exe &"); 
     return; 
 }
 
@@ -18,22 +20,24 @@ int main (int argc, char **argv)
 
     ZSocket server;
     //server.setLog("agent_server.log");
-    server.setLog();
-
-    bool bdb = server.connectDb();
-
-    if ( bdb && server.create() != -1
-        && server.bind(1086) 
-        && server.listen())
+    server.setLog(); 
+    
+    bool bdb = server.connectDb(); 
+    
+    if ( bdb && server.initServer(1086) )
     {
         printf("Start waiting client...\n");
-        server.procLoop(10);
+        //printf("start create 20.58 socket timeout = 6s\n");
+        //server.connectServer("192.168.20.58",1086,6);
+        //getchar();
+        server.procLoop(10); 
+    }
+    else
+    {
+        printf("Connect database or init server failed, getchar to quit\n");
+        getchar();
     }
    
-    printf("Exist agent loop, now bdb = %d\n", bdb);
-    //ZSocket client;
-    //int socketid = client.getWriteSocket("127.0.0.1");
-
-    //redis.disconnect();
+   //redis.disconnect(); 
 	return 0;
 }

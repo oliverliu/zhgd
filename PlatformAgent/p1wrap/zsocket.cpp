@@ -1,29 +1,60 @@
-#include "zsocket.h"
+
 
 #include <stdio.h>
 #include <stddef.h>
+#include <vector>
 
+#include "zsocket.h"
+#include "INIReader.h"
 #include "platformhead.h"
 #include "cutility.h"
 #include "zredis.h"
 
-#include "IniFile.h"
-#include <vector>
-using namespace std;
 
-static const char * s_dbip = "127.0.0.1";
+using namespace std;
+ string toString(long long_address)
+ {
+    string ret;
+    struct in_addr addr;
+    addr.s_addr = long_address;
+    char *dot_ip = inet_ntoa(addr);
+    ret = string(dot_ip);
+    return ret;        
+ } 
+
+ // buffer is little endian
+ void ZSocket::outputLittlepack(const unsigned char * buffer)
+ {
+    //print out little package info
+    plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
+            CUtility::getLittlePackUID(buffer), CUtility::getLittlePackDataSize(buffer));
+    PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
+    for(PLAT_UINT32 j = 0;j < size; j++)
+    {
+            plog("%02x  ", buffer[j]);
+    }
+    plog("\n");
+ }
+
 ZSocket::ZSocket() 
 {
     memset((char *) &m_connectionList, 0, sizeof(m_connectionList));
-	//init();
 
     m_pRedis = NULL;
     m_bInit  = false;
+    m_idListen = -1;
+    m_strfileLog = "";
+
+    if (!init())
+    {
+      plog("Failed: safe socket start socket!");
+    }
+
 }
 
 ZSocket::~ZSocket()
 {
-	unInit();
+    unInit();
     if ( m_pRedis )
     {
         delete m_pRedis;
@@ -33,22 +64,25 @@ ZSocket::~ZSocket()
 
 bool ZSocket::init()
 {
-	bool ret = true;
-	/* start safe socket */
-	if (safeSocket_startSocket() == FALSE)
-	{
-		plog ("safe socket failed to be started!\n");
-		ret = false;
-	}
+    TSafeStruct_CfgData pa ;
+    memset(&pa, 0, sizeof(TSafeStruct_CfgData));
+ 
+    bool ret = true;
+    /* start safe socket */
+    if (safeSocket_startSocket(&pa) == -1)
+    {
+            plog ("safe socket failed to be started!\n");
+            ret = false;
+    }
     m_bInit = ret;
-	return ret;
+    return ret;
 }
 
 bool ZSocket::unInit()
 {
     if ( m_bInit )
     {
-	    safeSocket_stopSocket ();
+        safeSocket_stopSocket ();
         m_bInit = false;
     }
     return true;
@@ -59,14 +93,20 @@ int ZSocket::write(int id, const char* data, int byteRead, int flag)
     return safeSocket_send (id, data, byteRead, flag);
 }
 
-int ZSocket::read(int sockfd, void *buf, size_t len, int *pflags)
+int ZSocket::read(int sockfd, void *buf, size_t len, int pflags)
 {
     return safeSocket_recv(sockfd, buf, len, pflags);
 }
  
 int ZSocket::connectServer(const char *ip,int port,int timeout)
 {
-    return getWriteSocket(ip,port,timeout);
+    int sockid = create();
+    if( sockid < 0)
+    {
+        plog("Failed: create sockid, now is =%d\n", sockid);
+        return -1;
+    }
+    return connect(sockid, port, ip,timeout);   
 }
 
 int ZSocket::disconnectServer(char* ip)
@@ -86,35 +126,32 @@ int ZSocket::disconnectServer(int did)
 int ZSocket::getWriteSocket(const char *ip,int port,int timeout)
 {
     int sockid = create();
-    return connect(sockid, port, ip,timeout);	
+    return connect(sockid, port, ip,timeout);   
 }
 
 int ZSocket::create()
 {
-    if (!init())
-	{
-		plog("Failed: safe socket start socket!");
-		return -1;
-	}
-
-	/* create safe socket */
-	m_idListen = safeSocket_socket (SS_PROTOCOL_UDP, SS_WITHCONNECTION);
-	if (m_idListen == SS_FAILED)
-	{
-		plog ("Failed: safeSockID created!\n");
-		return -1;
-	}
-    return m_idListen;
+    int ret = -1;
+   
+    /* create safe socket */
+    ret =  safeSocket_socket (SS_PROTOCOL_UDP, SS_WITHCONNECTION);
+    if (ret == SS_FAILED)
+    {
+            plog ("Failed: safeSockID created!\n");
+            return -1;
+    }
+    return ret;
 }
 
 bool ZSocket::bind(int _port, const char *ip )
 {
-    USHORT port = _port;
+    unsigned short port = _port;
 
     /* bind safeSockID to listen connection request from client */
-    SOCKADDR_IN   localAddr;
+   // SOCKADDR_IN   localAddr;
+    struct sockaddr_in localAddr;
     localAddr.sin_family = AF_INET;
-    localAddr.sin_port = port;
+    localAddr.sin_port = htons(port);
     if ( ip != NULL)
     {
         //localAddr.sin_addr.s_addr =  inet_addr ("127.0.0.1");
@@ -122,16 +159,18 @@ bool ZSocket::bind(int _port, const char *ip )
     }
     else
     {
-         localAddr.sin_addr.s_addr = htonl(INADDR_ANY); // inet_addr ("127.0.0.1");
+         localAddr.sin_addr.s_addr = INADDR_ANY; // inet_addr ("127.0.0.1");
     }
 
-    if (safeSocket_bind (m_idListen, (const SOCKADDR *) & localAddr, sizeof (SOCKADDR)) 
+    if (safeSocket_bind (m_idListen, (const sockaddr*) & localAddr, sizeof (struct sockaddr_in)) 
         == SS_FAILED)
     {
         int errNumber = safeSocket_getErrorNum (m_idListen);
         plog ("bind error, errNumber: %u\n", errNumber);
         return false;
     }
+
+    plog("bind finished port=%d, listenid = %d \n", port, m_idListen);
     return true;
 
 }
@@ -139,11 +178,12 @@ bool ZSocket::bind(int _port, const char *ip )
 bool ZSocket::listen()
 {
     /* set safeSockID to listen state */
-    if (safeSocket_listen (m_idListen, MAX_CNT_COUNT) == SS_FAILED) // the parameter value 3 means?
+    //if (safeSocket_listen (m_idListen, MAX_CNT_COUNT) == SS_FAILED) // the parameter value 3 means?
+    if (safeSocket_listen (m_idListen, 3) == SS_FAILED) // the parameter value 3 means?
     {
-	    int errNumber = safeSocket_getErrorNum (m_idListen);
-	    plog ("Failed: socket to be set to listen state, errNumber: %u\n", errNumber);
-	    return false;
+            int errNumber = safeSocket_getErrorNum (m_idListen);
+            plog ("Failed: socket to be set to listen state, errNumber: %u\n", errNumber);
+            return false;
     }
     return true;
 }
@@ -152,29 +192,40 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
 {
     if( strlen(ip) <= 0)
     {
-        printf("ip address is empty\n");
+        plog("ip address is empty\n");
         return -1;
     }
-	/* bind safeSockID to listen connection request from client */
-	SOCKADDR_IN   localAddr;
-	localAddr.sin_family = AF_INET;
-	localAddr.sin_port = port;
-    //localAddr.sin_addr.s_addr =  inet_addr ("127.0.0.1");
+        /* bind safeSockID to listen connection request from client */
+    struct sockaddr_in localAddr;
+    memset(&localAddr, 0, sizeof(struct sockaddr_in));
+    localAddr.sin_family = AF_INET;
+    localAddr.sin_port = htons(port);
     localAddr.sin_addr.s_addr = inet_addr (ip);
    
-	/* connect to server */
-	if (safeSocket_connect (sockid, (const SOCKADDR *) & localAddr, sizeof (SOCKADDR)) 
-        == SS_FAILED)
-	{
-	   int errNumber = safeSocket_getErrorNum (sockid);
-	   plog ("connect failed, errNumber = %u\n", errNumber);
-	   return -1;
-	}
+    /* connect to server */
+    plog ("Connect ip %s\n", ip);
+    if (safeSocket_connect (sockid, (const struct sockaddr*) & localAddr, sizeof (sockaddr_in)) 
+              == SS_FAILED)
+    {
+       int errNumber = safeSocket_getErrorNum (sockid);
+       plog ("connect failed, errNumber = %u\n", errNumber);
+	   
+	   #ifdef Q_WS_WIN
+       closesocket (sockid);
+	   #else
+	   close(sockid)
+	   #endif
+	   
+       return -1;
+    }
 
-     /* add safeSock to except set */
-	TSafeSocket_FdSet  exceptSet;
-	SS_FD_ZERO (&exceptSet);
-	SS_FD_SET (sockid, &exceptSet);
+    //return sockid;
+    //for now do not test fd_set
+
+ /* add safeSock to except set */
+    TSafeSocket_FdSet  exceptSet;
+    SS_FD_ZERO (&exceptSet);
+    SS_FD_SET (sockid, &exceptSet);
 
     struct timeval timeout;
     timeout.tv_sec = seconds;//3s
@@ -182,40 +233,46 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
     
     int  errNumber ;
     if ( seconds > 0)
+    {
+        plog ("Wait connect result %d seconds\n", seconds);
         errNumber = safeSocket_select(0, NULL,NULL, &exceptSet,&timeout);
+    }
     else
         errNumber = safeSocket_select (0, NULL,NULL, &exceptSet, NULL);
 
-	if (errNumber == 0)
-	{
-		plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
-		return -1;
-	}
+    if (errNumber == 0)
+    {
+        plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
+        return -1;
+    }
 
     int ret = -1;
-	if (SS_FD_ISSET(sockid, &exceptSet))
-		ret = sockid;
-	
+    if (SS_FD_ISSET(sockid, &exceptSet))
+            ret = sockid;
+        
     return ret;
 }
+
  void ZSocket::preSockSet()
  {
     SS_FD_ZERO (&m_excepSet);
     SS_FD_ZERO(&m_readSet);
 
     SS_FD_SET (m_idListen, &m_excepSet);
-	for (int listnum = 0; listnum < MAX_CNT_COUNT; listnum++)
+    for (int listnum = 0; listnum < MAX_CNT_COUNT; listnum++)
     {
-		if (m_connectionList[listnum] != 0) 
-        {
-			SS_FD_SET(m_connectionList[listnum],&m_readSet);
-		}
-	}
+            if (m_connectionList[listnum] != 0) 
+            {
+                    SS_FD_SET(m_connectionList[listnum],&m_readSet);
+            }
+    }
  }
 
 bool ZSocket::initServer(int port)
 {
-    if ( create() == -1 || !bind(port) || !listen() )
+    m_idListen = create(); 
+
+    if ( m_idListen == -1 || !bind(port) || !listen() )
     {
         return false;
     }
@@ -249,16 +306,6 @@ bool ZSocket::initServer(int port)
     return bret;
 }
 
- string toString(long long_address)
- {
-    string ret;
-    struct in_addr addr;
-    addr.s_addr = long_address;
-    char *dot_ip = inet_ntoa(addr);
-    ret = string(dot_ip);
-    return ret;        
- } 
-
 bool ZSocket::addConnection(long longip,int sockid )
 {
     bool bret = false;
@@ -266,13 +313,11 @@ bool ZSocket::addConnection(long longip,int sockid )
     {
         if (m_connectionList[i] == 0) 
         {
-            //printf("\nConnection accepted:   FD=%d; Slot=%d\n",sockid,i);
-            plog("\nConnection accepted:   FD=%d; Slot=%d\n",sockid,i);
             m_connectionList[i] = sockid;
             m_mapLongIP2SockId.insert(pair<long,int>(longip, sockid) );
               
-            plog("Connection: add to fd set, longip =%0x, ip=%s\n", longip, toString(longip).c_str());
-            //printf("Connection: add to fd longip =%0x, ip=%s\n", longip, toString(longip).c_str());
+            plog("Connection: add tomap: ip2sockid, sockid =%0x, ip=%s,index=%d\n", 
+                sockid, toString(longip).c_str(),i);
             bret = true;
             break;
          }
@@ -282,34 +327,51 @@ bool ZSocket::addConnection(long longip,int sockid )
 
 void ZSocket::handleNewConnection() 
 {
-	SOCKADDR_IN  clientAddr;
-	size_t       clientAddrLen;
+    struct sockaddr_in clientAddr;
+#ifndef Q_WS_WIN
+    socklen_t clientAddrLen;
+#else
+    int       clientAddrLen;
+#endif
 
     /* Socket file descriptor for incoming connections */
-	int connection = safeSocket_accept(m_idListen,(SOCKADDR *) &clientAddr, & clientAddrLen);
-	if (connection < 0) 
+    int connection = safeSocket_accept(m_idListen,(struct sockaddr*) &clientAddr, & clientAddrLen);
+    if (connection < 0) 
     {
-		plog("Error: accept listenid=%d\n",m_idListen);
-		return;
-	}
-	
+        plog("Error: accept listenid=%d\n",m_idListen);
+        return;
+    }
+        
     bool badd =  addConnection(clientAddr.sin_addr.s_addr, connection);
-	if (!badd) 
+    if (!badd) 
     {
-		/* No room left in the queue! */
-		plog("\nNo room left for new client.\n");
+        /* No room left in the queue! */
+        plog("\nNo room left for new client.\n");
         char data[102] = "Sorry, this server is too busy. Try again later!\r\n";
-        safeSocket_send (connection, data, 1024 , SS_DATA_UNIMPORTANT);
-		
+        safeSocket_send (connection, data, 1024 , 0);
+                
         //close socket
-		safeSocket_close (connection);
-	}
+        safeSocket_close (connection);
+    }
 }
 
-bool ZSocket::connectDb()
+int ZSocket::connectDb()
 {
     m_pRedis = new ZRedis();
-    return m_pRedis->connect(s_dbip);
+    
+    INIReader reader("sid.config");
+    if (reader.ParseError() < 0) {
+        plog( "Can't load 'sid.config'\n");
+        return false;
+    }
+    std::string value = reader.Get("self","dbip","127.0.0.1");
+
+    plog("Address: database = %s \n",
+        value.c_str());
+
+//    int ret = m_pRedis->connect_test(value.c_str());// const char *host);
+    return m_pRedis->connect(value.c_str());
+    
 }
 
 #define ASSERT_SOCKID(id) {if(id <= 0) return false;}
@@ -368,10 +430,34 @@ string ZSocket::getIPFromID(int id)
     key[1]='x';
     sprintf(key+2, "%0x", id);
 
-    //id->longip
-    string value = CIniFile::GetValue(key,"ip", "sid.config");
+    string value = "";
 
-    return value;
+    //id->longip
+    INIReader reader("sid.config");
+
+    if (reader.ParseError() < 0) {
+        plog( "Can't load 'sid.config'\n");
+        return "";
+    }
+    value = reader.Get("ip",key,"");
+    //plog("Get IP from ID in configure file, id = %s, ip = %s\n", key, value.c_str());
+
+    return value; 
+}
+
+std::string ZSocket::getIPFromSockID(int sockid)
+{
+    string ret ="";
+    map<long,int>::iterator it;
+    for(it = m_mapLongIP2SockId.begin(); it != m_mapLongIP2SockId.end(); it++)
+    {
+        if (sockid == it->second )
+        {
+            ret = toString(it->first);
+            break;
+        }
+    }
+    return ret;   
 }
 
 int ZSocket::getSockIDFromID(int id)
@@ -379,6 +465,8 @@ int ZSocket::getSockIDFromID(int id)
     int ret = -1;
     //id->longip
     string value = getIPFromID(id);
+    plog("Info: get IP=%s, did=%0x\n", value.c_str(), id);
+
     long long_address = inet_addr (value.c_str()) ;
 
     //longip->sockid
@@ -391,8 +479,6 @@ int ZSocket::getSockIDFromID(int id)
 
     return ret;
 }
-
-
 
 void ZSocket::initIDIP()
 {
@@ -453,6 +539,9 @@ int ZSocket::sendTransfer(int sockid,const char* data, int size, int flag)
     memcpy(buf, strdst.c_str(), strdst.length());
     memcpy(buf + strdst.length(), data, size);
 
+    plog("Want to transfer %d data\n",  strdst.length() + size);
+    outputLittlepack((const unsigned char*)data);
+
     return write(sockid, buf, strdst.length() + size, flag);
 }
 
@@ -490,6 +579,87 @@ bool ZSocket::isTransferCtrl(const char * buffer)
    return strsrc != strdst ? false : true;
 }
 
+//int connect1025Server(int port,int seconds)
+//{
+//        //TSafeStruct_CfgData pa ;
+//        //memset(&pa, 0, sizeof(TSafeStruct_CfgData));
+//        //if (safeSocket_startSocket( &pa ) == FALSE)
+//        //{
+//        //plog ("safe socket failed to be started!\n");
+//        //        return 0;
+//        //}
+//    /* create safe socket */
+//        int safeSockID = safeSocket_socket (SS_PROTOCOL_UDP, SS_WITHCONNECTION);
+//        if (safeSockID == SS_FAILED)
+//        {
+//                plog ("safeSockID failed to be created!\n");
+//                return 0;
+//        }
+//
+//        struct sockaddr_in  serverAddr;
+//        serverAddr.sin_family = AF_INET;
+//        serverAddr.sin_port = htons(port);
+//        //serverAddr.sin_addr.s_addr = inet_addr ("127.0.0.1");
+//        serverAddr.sin_addr.s_addr = inet_addr ("192.168.20.58");
+//
+//        /* add safeSock to except set */
+//        TSafeSocket_FdSet  exceptSet,readSet, writeSet;
+//        SS_FD_ZERO (& exceptSet);
+//    SS_FD_ZERO (& readSet);
+//    SS_FD_ZERO (& writeSet);
+//        SS_FD_SET (safeSockID, & exceptSet);
+//    SS_FD_SET (safeSockID, & readSet);
+//    SS_FD_SET (safeSockID, & writeSet);
+//
+//        /* connect to server */
+//        if (safeSocket_connect (safeSockID, (const sockaddr*) & serverAddr, sizeof (struct sockaddr_in)) == SS_FAILED)
+//        {
+//           int errNumber = safeSocket_getErrorNum (safeSockID);
+//           plog("connect failed, errNumber = %u\n", errNumber);
+//
+//           return 0;
+//        }
+//
+//     struct timeval timeout;
+//    timeout.tv_sec = seconds;//3s
+//    timeout.tv_usec = 0;
+//    
+//    int  errNumber ;
+//    if ( seconds > 0)
+//        errNumber = safeSocket_select(0, &readSet,&writeSet, &exceptSet,&timeout);
+//    else
+//        errNumber = safeSocket_select (0, &readSet,&writeSet, &exceptSet, NULL);
+//
+//        ///* wait until connection has established */
+//        //int errNumber = safeSocket_select (0, NULL, NULL, & exceptSet, NULL);
+//        if (errNumber == 0)
+//        {
+//             int errNumber = safeSocket_getErrorNum (safeSockID);
+//             plog ("select error: connection hasn't been established! errNumber =  %d\n", errNumber);
+//        }
+//
+//        if( SS_FD_ISSET(safeSockID,&readSet))
+//        {
+//            plog("read set is set\n");
+//        }
+//        if( SS_FD_ISSET(safeSockID,&writeSet))
+//        {
+//            plog("writeSet set is set\n");
+//        }
+//        if ( SS_FD_ISSET(safeSockID,&exceptSet))
+//        {
+//             plog("except set is set\n");
+//        }
+//        if ( errNumber == 0)
+//        {
+//            plog("getchar to exit connect1025Server\n");
+//            getchar();
+//            return 0;
+//        }
+//    return errNumber;
+//    return 0;
+//}
+
 //buffer content is "selfconnect#ID.."
 int ZSocket::procConnectCtrl(const char * buffer)
 {
@@ -498,17 +668,20 @@ int ZSocket::procConnectCtrl(const char * buffer)
     char msghead[] = "selfconnect";
     unsigned int did = 0; 
     sscanf(buffer + strlen(msghead),"%d", &did);
-   
-
+  
     string ip = getIPFromID(did);
     if (ip.empty())
     {
-        printf("Failed: Find ip from configure file for id=0x%0x.\n",did);
+        plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procConnectCtrl \n",
+            did);
         return -1;
     }
-    sockid = connectServer(ip.c_str(),1086,3);
+
+    sockid = connectServer(ip.c_str(),1086,163);
+
     if( sockid != -1)
     {
+        plog("Info: connect server %s successful!\n", ip.c_str());
         string ip = getIPFromID(did);
         long long_address = inet_addr ( ip.c_str()) ;
         badd = addConnection(long_address, sockid);
@@ -516,6 +689,10 @@ int ZSocket::procConnectCtrl(const char * buffer)
         {
             plog("Warning: connect successful, but add monitor failed!!!! That is unnormal!\n");
         }
+    }
+    else
+    {
+        plog("Warning: connect server %s failed!\n", ip.c_str());
     }
     return sockid;
 }
@@ -533,7 +710,8 @@ int ZSocket::procDisconnectCtrl(const char * buffer)
         string value = getIPFromID(did);
         if (value.empty())
         {
-            printf("Failed: Find ip from configure file for id=0x%0x.\n",did);
+            plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procDisconnectCtrl\n",
+                   did);
             return -1;
         }
         long long_address = inet_addr (value.c_str()) ;
@@ -560,7 +738,13 @@ int ZSocket::procTransferCtrl(const char * buffer)
 
     char msgLittleBuf[SIZE] = "\0";
     memcpy(msgLittleBuf, buffer + strlen(msghead),SIZE);
-           
+    
+    char dd[22] = "\0";
+    memcpy(dd, buffer, strlen(msghead));
+    plog("data: %s,", dd);
+
+    outputLittlepack((const unsigned char*)msgLittleBuf);
+
     s_packinfo pack;
     getPackinfo(pack,msgLittleBuf);
 
@@ -578,7 +762,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
     int sockidTo = getSockIDFromID(pack.did);
     if (sockidTo > 0 && canWrite(sockidTo,3))
     {
-        byteSent = write (sockidTo, msgLittleBuf, pack.size, SS_DATA_UNIMPORTANT);
+        byteSent = write (sockidTo, msgLittleBuf, pack.size, 0);
         if (byteSent == SS_FAILED)
         {
             int errNumber = safeSocket_getErrorNum (sockidTo);
@@ -586,8 +770,13 @@ int ZSocket::procTransferCtrl(const char * buffer)
             return byteSent;
         }
         // We got some data
-        plog("\nwrite to sockid %d, sid=%d",sockidTo,pack.sid);     
+        plog("write to sockid %d, sid=%d\n",sockidTo,pack.sid);     
       
+    }
+    else
+    {
+        plog("Error: In procTransferCtrl, did = %d, sockidTo = %d, do not write out!\n",
+              pack.did, sockidTo);
     }
     return byteSent;
 }
@@ -601,7 +790,17 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
         CUtility::littlePackToLE(buffer);
     }
 
-    packinfo.datetype = CUtility::getLittlePackDateType(buffer);
+    //print out little package info
+    plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
+            CUtility::getLittlePackUID(buffer), CUtility::getLittlePackDataSize(buffer));
+    PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
+    for(PLAT_UINT32 j = 0;j < size; j++)
+    {
+            plog("%02x  ", buffer[j]);
+    }
+    plog("\n");
+
+    packinfo.datatype = CUtility::getLittlePackDataType(buffer);
     packinfo.sid = CUtility::getLittlePackSID(buffer);
     packinfo.did = CUtility::getLittlePackDID(buffer);
     packinfo.size = CUtility::getLittlePackSize(buffer);
@@ -611,59 +810,69 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
     {
         CUtility::littlePackToBE(buffer);
     }
+    plog("Little pack info in socket: datatype=%d, sid= 0x%0x, did=0x%0x, size = %d\n",
+         packinfo.datatype, packinfo.sid,packinfo.did,packinfo.size);
 }
 
 // listnum: Current item in connectlist for for loops
-void ZSocket::dealWithData(	int listnum	)
+void ZSocket::dealWithData(     int listnum     )
 {
-    char self[] = "selftransfer";
-	char buffer[SIZE + 12 + 1];    //12 is "selftransfer" length
+    //char self[] = "selftransfer";
+    char buffer[SIZE + 12 + 1];    //12 is "selftransfer" length
     memset(buffer, 0,SIZE+5);
-	char *cur_char;      /* Used in processing buffer */
+    char *cur_char;      /* Used in processing buffer */
 
     int sockId = m_connectionList[listnum];
     
-    int      flag;
-	if (safeSocket_recv(sockId,buffer,SIZE+4,&flag) < 0) 
+    int      flag = 0;
+    int      recvlen = safeSocket_recv(sockId,buffer,SIZE+14,flag);
+    if ( recvlen < 0) 
     {
-		// Connection closed, close this end and free up entry in connectlist 
-		plog("\nConnection lost: FD=%d;  Slot=%d\n",sockId,listnum);
-		safeSocket_close(sockId);
-		m_connectionList[listnum] = 0;
-	} 
+        // Connection closed, close this end and free up entry in connectlist 
+        plog("recv return %d< 0"
+             "Connection lost: FD=%d;  Slot=%d, close the socket, ip = %s\n",
+             recvlen, sockId,listnum,getIPFromSockID(sockId).c_str());
+        plog("Now do nothing, maybe should close the socket\n");
+        //safeSocket_close(sockId);
+        // m_connectionList[listnum] = 0;
+    } 
     else
     {
+        plog("Recv data lengh %d\n",recvlen );
         //get content
        if (isFromSelf(buffer)) //transfer them to other terminal
        {
-           plog("Transfer from self: true\n");
+           plog("Message from self: true\n");
            if(isConnectCtrl(buffer))
            {
-              plog("Transfer connect: true\n");
-              int ret = procConnectCtrl(buffer);
-              string str = ret != -1 ? "true" : "false";
-              if (canWrite(sockId,3))
-              {
-                int len = write(sockId,str.c_str(), str.length(), SS_DATA_UNIMPORTANT);
-                if ( len > 0)
-                    plog("Response successful: connect result = %s\n", str.c_str());
+                //bool bbb = canWrite(sockId,3);
+                plog("Self want to connect: true\n");
+                int retsockid = procConnectCtrl(buffer);
+                string str = retsockid != -1 ? "true" : "false";
+                if (canWrite(sockId,3))
+                {
+                    int len = write(sockId,str.c_str(), str.length(), 0);
+                    if ( len > 0)
+                        plog("Response %s successful: connect result = %s\n", 
+                            getIPFromSockID(sockId).c_str(), str.c_str());
+                    else
+                        plog("Response %s Failed: write failed, the content = %s\n", 
+                            getIPFromSockID(sockId).c_str(), str.c_str());
+                }
                 else
-                    plog("Response Failed: write failed, the content = %s\n", str.c_str());
-              }
-              else
-              {
-                  plog("Failed: write sockid.\n");
-              }
+                {
+                    plog("Failed: Can not write sockid. %s\n", getIPFromSockID(sockId).c_str());
+                }
            }
 
            else if(isDisconnectCtrl(buffer))
            {
-              plog("Transfer disconnect: true\n");
+              plog("Self want to disconnect: true\n");
               int ret = procDisconnectCtrl(buffer);
               string str = ret != -1 ? "true" : "false";
               if (canWrite(sockId))
               {
-                  int len = write(sockId,str.c_str(), str.length(),SS_DATA_UNIMPORTANT);
+                  int len = write(sockId,str.c_str(), str.length(),0);
                   if ( len > 0)
                     plog("Response successful: disconnect result = %s\n", str.c_str());
                   else
@@ -677,14 +886,14 @@ void ZSocket::dealWithData(	int listnum	)
 
            else if(isTransferCtrl(buffer))
            {
-               plog("Transfer data: true\n");
+               plog("Self want to transfer data: true\n");
                int len = procTransferCtrl(buffer);
-               plog("Transfer data: length = %d\n", len);
+               plog("procTransferCtrl data: length = %d\n", len);
            }
        }
        else //from other terminal to me. push back
        {
-           plog("Transfer from other: true\n");
+           plog("Message from other: true, just push it\n");
            s_packinfo pack;
            getPackinfo(pack,buffer);
 
@@ -692,26 +901,29 @@ void ZSocket::dealWithData(	int listnum	)
             // the did should be equal selfID
            m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
        }
-	}
+  }//safeSocket_recv else end
 }
 
 void ZSocket::readSocks()
 {
-	if (SS_FD_ISSET(m_idListen,&m_excepSet))
+    if (SS_FD_ISSET(m_idListen,&m_excepSet))
     {
+        plog("\nNew connection create with me\n");
          //check our "listening" socket
-		handleNewConnection();
+         handleNewConnection();
     }
-   // else
+    else
     {
         for (int i = 0; i < MAX_CNT_COUNT; i++) 
         {
-		    if (m_connectionList[i] >0 &&
+            if (m_connectionList[i] >0 &&
                 SS_FD_ISSET(m_connectionList[i],&m_readSet))
             {
-			    dealWithData(i);
+                plog("\nProcesss socket %d, ip =%s do dealWithData\n", 
+                    m_connectionList[i],getIPFromSockID(m_connectionList[i]).c_str());//New connection create with me\n");
+                dealWithData(i);
             }
-	    } 
+        } 
     }
 }
 
@@ -721,17 +933,18 @@ void ZSocket::procLoop(int timeoutSeconds)
     if( timeoutSeconds >= 0)
     {
         timeout.tv_sec = timeoutSeconds;//10;
-	    timeout.tv_usec = 0;
+        timeout.tv_usec = 0;
     }
 
+    plog("Timeout interval in procLoop %d seconds\n", timeoutSeconds);
     while (1) 
-	{
+    {
         preSockSet();
         int readsocks = 0;
 
         if( timeoutSeconds >= 0)
         {
-		   readsocks = safeSocket_select (0, &m_readSet, NULL,  &m_excepSet,  &timeout);
+           readsocks = safeSocket_select (0, &m_readSet, NULL,  &m_excepSet,  &timeout);
         }
         else
         {
@@ -745,10 +958,10 @@ void ZSocket::procLoop(int timeoutSeconds)
         else
         {
             if (readsocks < 0) plog("select error: data failed to be received!\n");
-            else if (readsocks == 0) { printf(".");	fflush(stdout);}
+            else if (readsocks == 0) { plog(".");     fflush(stdout);}
         }
 
-	}//endof while
+    }//endof while
 }
 
 void ZSocket::plog(const char* format, ...)
@@ -774,7 +987,7 @@ void ZSocket::plog(const char* format, ...)
 
 void ZSocket::setLog(const char* file) 
 {
-    if ( file != NULL)
+    if ( file != NULL && m_strfileLog.length() == 0)
     {
         m_strfileLog = std::string(file);
         FILE *  fd = fopen (file, "w"); 
@@ -814,27 +1027,29 @@ bool ZSocketClient::init()
 int ZSocketClient::connectServer(const char *ip,int port, int timeout)
 {
     m_sockId = ZSocket::connectServer(ip,port,timeout);
+    plog("Client wants connect ip =%s, port=%d, timeout=%d, return sockid=%d\n",
+        ip,port, timeout,m_sockId);
     return m_sockId;
 }
 
-// transfer data by parameter did not the did in littlepack
+// transfer data by parameter DID,the destination is not the DID in littlepack
 int ZSocketClient::transferTerminal(const unsigned int did, const char* littlepack)
 {
     if ( canWrite(m_sockId,3))
     {
-        //printf("Msg type: transfer are sent\n");
+        //plog("Msg type: transfer are sent\n");
         //
         //int flag = 0;
         //int len = sendTransfer(m_sockId,littlepack, strlen(littlepack),flag);
         //if( len <=0 )
         //{
         //    int errNumber = safeSocket_getErrorNum (m_sockId);
-        //    printf ("data failed to be sent, errNumber = %u\n", errNumber);
+        //    plog ("data failed to be sent, errNumber = %u\n", errNumber);
         //    return -1;
         //}
         //else
         //{
-        //    printf("Result: send transfer bytes = %d\n", len);
+        //    plog("Result: send transfer bytes = %d\n", len);
         //    return len;
         //}
     }
@@ -843,13 +1058,13 @@ int ZSocketClient::transferTerminal(const unsigned int did, const char* littlepa
 
 int ZSocketClient::transferTerminal(const char* littlepack)
 {
-    plog("Terminal: transfer\n");
+    plog("\nTerminal: transfer\n");
     if ( canWrite(m_sockId,3))
     {
         plog("Msg type: transfer are sent\n");
-        
+        int lenpack = CUtility::getLittlePackSize((const unsigned char*)littlepack);
         int flag = 0;
-        int len = sendTransfer(m_sockId,littlepack, strlen(littlepack),flag);
+        int len = sendTransfer(m_sockId,littlepack, lenpack,flag);
         if( len <=0 )
         {
             int errNumber = safeSocket_getErrorNum (m_sockId);
@@ -871,13 +1086,13 @@ int ZSocketClient::transferTerminal(const char* littlepack)
            
 int ZSocketClient::disconnectTermianl(int did)
 {
-    plog("Terminal: disconnect\n");
+    plog("\nTerminal: disconnect\n");
     return connectTerminalInterl(did,false);
 }
 
 int ZSocketClient::connectTermianl(int did)
 {
-    plog("Terminal: connect\n");
+    plog("\nTerminal: connect\n");
     return connectTerminalInterl(did,true);
 }
 
@@ -919,7 +1134,7 @@ int ZSocketClient::connectTerminalInterl(int did, bool bconnect)
     if( canRead(m_sockId,16))
     {
         char buf[64] = "\0";
-        int len = read(m_sockId, buf, 64, &flag);
+        int len = read(m_sockId, buf, 64, 0);
         if( len <=0 )
         {
             int errNumber = safeSocket_getErrorNum (m_sockId);

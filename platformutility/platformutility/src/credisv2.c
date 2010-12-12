@@ -32,14 +32,26 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+
+#ifdef Q_WS_WIN
 #include <Winsock2.h>
+#else
+#include <unistd.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#endif
+
 #include <fcntl.h>
 #include <errno.h>
 #include <assert.h>
 
 #include "platformhead.h"
 
-#include "credis.h"
+#include "credisv2.h"
 
 #define CR_ERROR '-'
 #define CR_INLINE '+'
@@ -58,6 +70,17 @@
 #define CR_MULTIPLEXING_API_SIZE_STR STRINGIFY(CREDIS_MULTIPLEXING_API_SIZE)
 #define CR_USED_MEMORY_HUMAN_SIZE_STR STRINGIFY(CREDIS_USED_MEMORY_HUMAN_SIZE)
 
+#ifdef PRINTDEBUG
+/* add -DPRINTDEBUG to CPPFLAGS in Makefile for debug outputs */
+#define DEBUG(...)                                 \
+  do {                                             \
+    printf("%s() @ %d: ", __FUNCTION__, __LINE__); \
+    printf(__VA_ARGS__);                           \
+    printf("\n");                                  \
+  } while (0)
+#else
+#define DEBUG(...)
+#endif
 
 //modify by ibm
 //REDIS redis = NULL;
@@ -332,7 +355,7 @@ static int cr_readln(REDIS rhnd, int start, char **line, int *idx)
          (nl = cr_findnl(buf->data + buf->idx + start, buf->len - (buf->idx + start))) == NULL) {
     avail = buf->size - buf->len;
     if (avail < CR_BUFFER_WATERMARK || avail < more) {
-      DEBUG("available buffer memory is low, get more memory");
+      //DEBUG("available buffer memory is low, get more memory");
       if (cr_moremem(buf, more>0?more:1))
         return CREDIS_ERR_NOMEM;
 
@@ -541,7 +564,7 @@ static int cr_sendfandreceive(REDIS rhnd, char recvtype, const char *format, ...
   cr_buffer *buf = &(rhnd->buf);
 
   va_start(ap, format);
-  rc = _vsnprintf(buf->data, buf->size, format, ap);
+  rc = vsnprintf(buf->data, buf->size, format, ap);
   va_end(ap);
 
   if (rc < 0)
@@ -553,7 +576,7 @@ static int cr_sendfandreceive(REDIS rhnd, char recvtype, const char *format, ...
       return CREDIS_ERR_NOMEM;
 
     va_start(ap, format);
-    rc = _vsnprintf(buf->data, buf->size, format, ap);
+    rc = vsnprintf(buf->data, buf->size, format, ap);
     va_end(ap);
   }
 
@@ -564,16 +587,19 @@ static int cr_sendfandreceive(REDIS rhnd, char recvtype, const char *format, ...
 
 void credis_close(REDIS rhnd)
 {
-  //if (rhnd->fd > 0)
-  //  close(rhnd->fd);
+#ifdef Q_WS_WIN
   if (rhnd->fd > 0) // has connected and init
   {
      closesocket(rhnd->fd); 
   }
-   cr_delete(rhnd);
-   WSACleanup(); 
+  WSACleanup(); 
+#else
+  if (rhnd->fd > 0)
+    close(rhnd->fd);
+#endif
 }
 
+#ifdef Q_WS_WIN
 REDIS credis_connect(const char *host, int port, int timeout)
 {
   int fd, yes = 1;
@@ -666,6 +692,72 @@ WSACleanup();
   cr_delete(rhnd);
   return NULL;
 }
+#else
+
+
+REDIS credis_connect(const char *host, int port, int timeout)
+{
+  int fd, yes = 1;
+  struct sockaddr_in sa;  
+  REDIS rhnd;
+
+  if ((rhnd = cr_new()) == NULL)
+    return NULL;
+
+  if (host == NULL)
+    host = "127.0.0.1";
+  if (port == 0)
+    port = 6379;
+
+  if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ||
+      setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes)) == -1 ||
+      setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes)) == -1)
+    goto error;
+
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(port);
+  if (inet_aton(host, &sa.sin_addr) == 0) {
+    struct hostent *he = gethostbyname(host);
+    if (he == NULL)
+      goto error;
+    memcpy(&sa.sin_addr, he->h_addr, sizeof(struct in_addr));
+  }
+
+  if (connect(fd, (struct sockaddr*)&sa, sizeof(sa)) == -1)
+    goto error;
+
+  strcpy(rhnd->ip, inet_ntoa(sa.sin_addr));
+  rhnd->port = port;
+  rhnd->fd = fd;
+  rhnd->timeout = timeout;
+
+  /* We can receive 2 version formats: x.yz and x.y.z, where x.yz was only used prior 
+   * first 1.1.0 release(?), e.g. stable releases 1.02 and 1.2.6 */
+  if (cr_sendfandreceive(rhnd, CR_BULK, "INFO\r\n") == 0) {
+    int items = sscanf(rhnd->reply.bulk,
+                       "redis_version:%d.%d.%d\r\n",
+                       &(rhnd->version.major),
+                       &(rhnd->version.minor),
+                       &(rhnd->version.patch));
+    if (items < 2)
+      goto error;
+    if (items == 2) {
+      rhnd->version.patch = rhnd->version.minor;
+      rhnd->version.minor = 0;
+    }
+    DEBUG("Connected to Redis version: %d.%d.%d\n", 
+          rhnd->version.major, rhnd->version.minor, rhnd->version.patch);
+  }
+
+  return rhnd;
+
+ error:
+  if (fd > 0)
+    close(fd);
+  cr_delete(rhnd);
+  return NULL;
+}
+#endif
 
 int credis_set(REDIS rhnd, const char *key, const char *val)
 {

@@ -16,6 +16,9 @@
     <Filter Include="interface">
       <UniqueIdentifier>{c5ab4831-a060-47ad-96d9-52660a210c9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="utility">
+      <UniqueIdentifier>{5b3ac83c-057f-49ad-ad36-36fab11e713d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -27,6 +30,24 @@
     <ClCompile Include="platforminterface.cpp">
       <Filter>interface</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\credisv2.c">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\cutility.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\ini.c">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\INIReader.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\wintimer.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\zredis.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="globle.h">
@@ -37,6 +58,30 @@
     </ClInclude>
     <ClInclude Include="platforminterface.h">
       <Filter>interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\credisv2.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\cutility.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\ini.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\INIReader.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\platformhead.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\tpackage.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\wintimer.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\zredis.h">
+      <Filter>utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

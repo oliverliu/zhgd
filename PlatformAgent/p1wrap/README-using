@@ -12,93 +12,28 @@
    4.1 please add a member variable ZSocket instance and m_sockId between it and server. such as
        add 2 member variables in your lib class.
 
-       ZSocket *m_sockClient;
-       int      m_sockId;
+       ZSocketClient* client =  new ZSocketClient();
 
    4.3 connect db and server
-       m_sockClient->connectDb();
-       m_sockId = m_sockClient->connectServer("127.0.0.1");
-       if (m_sockId <= 0)
+       
+       sockId = client->connectServer("127.0.0.1",1086,3);
+       if (sockId <= 0)
        {
          printf("Failed: connect server\n");
        }
     	 else
     	 {
-    	    printf("m_sockId=%d\n", m_sockId );
+    	    printf("sockId=%d\n", sockId );
     	 }
     
    4.4 When client want to connect another terminal which id is did;
-       int connectTermianl(int did)
-       {
-          return connectTerminalInterl(did,true);
-       }
+       client->connectTermianl(did)
        
-       int connectTerminalInterl(int did, bool bconnect)
-       {
-          if ( m_sockClient->canWrite(m_sockId,3))
-          {
-            sprintf(buf, "%d", did);
+   4.5 When client want to disconnect another terminal which id is did;
+       client->disconnectTermianl(did)
 
-            int len ;
-            if (bconnect)
-              len = m_sockClient->sendConnect(m_sockId,buf, strlen(buf), 0);
-            else
-              len = m_sockClient->sendDisconnect(m_sockId,buf, strlen(buf), 0);
-            if( len <=0 )
-            {
-              int errNumber = safeSocket_getErrorNum (m_sockId);
-              printf ("data failed to be sent, errNumber = %u\n", errNumber);
-              return -1;
-            }
-            else
-            {
-              printf("Result: send connect retValue = %d\n", len);
-            }
-          }
-            
-           //wait response, get connect result
-          if( m_sockClient->canRead(m_sockId,16))
-          {
-              char buf[64] = "\0";
-              int len = m_sockClient->read(m_sockId, buf, 64, 0);
-              if( len <=0 )
-              {
-                  int errNumber = safeSocket_getErrorNum (m_sockId);
-                  printf ("data failed to be sent, errNumber = %u\n", errNumber);
-              }
-
-              printf("GetResponse: connect = %s len = %d\n", buf,len);
-          }
-          else
-          {
-              printf("GetResponse NOT: socket connect can not read\n");
-          }
-       }
-       4.4 When client want to disconnect another terminal which id is did;
-       int disconnectTermianl(int did)
-       {
-          return connectTerminalInterl(did,false);
-       }
-       4.5 When client want to agent transfer message to other terminal
-       int transferTerminal(const char* littlepack)
-       {
-          if ( m_sockClient->canWrite(m_sockId,3))
-          {
-            printf("Msg type: transfer are sent\n");
-           
-            int len = client.sendTransfer(m_sockId,littlepack, sizeof(littlepack),0);
-            if( len <=0 )
-            {
-              int errNumber = safeSocket_getErrorNum (m_sockId);
-              printf ("data failed to be sent, errNumber = %u\n", errNumber);
-              return -1;
-            }
-            else
-            {
-              printf("Result: send connect retValue = %d\n", len);
-            }
-          }
-       }
+   4.6 When client want to agent transfer message to other terminal
+       client->transferTerminal(plittlepackcontent);
            
 
        

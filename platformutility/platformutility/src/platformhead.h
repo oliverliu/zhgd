@@ -4,10 +4,12 @@
 /*-----------------------------------------------------------------------------
 * 平台定义的数据类型
 * ----------------------------------------------------------------------------*/ 
-typedef     __int64                 PLAT_INT64;			/* 64 bits, signed  */ 
-typedef     unsigned __int64        PLAT_UINT64;		/* 64 bits, unsigned*/   
-typedef     signed short         	PLAT_INT16;			/* 16 bits, signed  */
-typedef     unsigned short	        PLAT_UINT16;		/* 16 bits, unsigned*/
+//typedef     __int64                 PLAT_INT64;			/* 64 bits, signed  */ 
+//typedef     unsigned __int64        PLAT_UINT64;		/* 64 bits, unsigned*/   
+typedef     long long 		    PLAT_INT64;			/* 64 bits, signed  */ 
+typedef     unsigned long long      PLAT_UINT64;		/* 64 bits, unsigned*/   
+typedef     signed short            PLAT_INT16;			/* 16 bits, signed  */
+typedef     unsigned short		PLAT_UINT16;		/* 16 bits, unsigned*/
 typedef     int                     PLAT_INT;			/* platform int     */
 typedef		unsigned int			PLAT_UINT;			/* unsigned int     */
 typedef     char                    PLAT_BYTE;			/* 8 bits, signed   */
@@ -28,8 +30,7 @@ typedef     unsigned long	        PLAT_UINT32;		/* long ,  unsigned */
 #define APP_DB_ADDR         0xc1000000					/*平台线路数据首地址	*/  
 #define GETSID		        0x3F						/*用来与操作取源ID的常量*/ 
 
-extern  PLAT_UBYTE APP_READ_ADDR[NETSIZE];
-extern  PLAT_UBYTE APP_WRITE_ADDR[NETSIZE];
+
 
 #endif
 

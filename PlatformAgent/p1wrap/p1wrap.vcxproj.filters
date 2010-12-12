@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="utility">
+      <UniqueIdentifier>{e8330d5c-ba76-4e3e-9d1f-ceaa784d28f3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -27,7 +30,31 @@
     <ClInclude Include="zsocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IniFile.h">
+    <ClInclude Include="..\..\platformutility\platformutility\src\credisv2.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\cutility.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\ini.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\INIReader.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\platformhead.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\tpackage.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\wintimer.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\platformutility\platformutility\src\zredis.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,8 +62,23 @@
     <ClCompile Include="zsocket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IniFile.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\platformutility\platformutility\src\credisv2.c">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\cutility.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\ini.c">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\INIReader.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\wintimer.cpp">
+      <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\platformutility\platformutility\src\zredis.cpp">
+      <Filter>utility</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -9,8 +9,10 @@
  * Description: for platform simulator network layer
  */
 
-#include "credis.h"
+#include "credisv2.h"
 #include "platformhead.h"
+
+//using namespace credisv2;
 
 class ZRedis
 {
@@ -19,7 +21,8 @@ public:
     ~ZRedis();
 
    /* init data buffer and credis */
-    bool connect(const char * host = 0);
+    //if connect successful return 1, else return 0
+    int connect(const char * host);
 
     /* close credis */
     int disconnect();
@@ -42,8 +45,8 @@ public:
     int app_sleep();
     int app_step(char *);
 
-    int app_set(char *,char *);
-    int app_get(char *,char *);
+    int app_set(const char *,const PLAT_UINT8 *);
+    int app_get(const char *,PLAT_UINT8* );
 
 private:
     char* app_getid();

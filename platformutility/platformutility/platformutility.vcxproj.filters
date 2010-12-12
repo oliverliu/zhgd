@@ -18,36 +18,48 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="credis.c">
+    <ClCompile Include="src\credisv2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cutility.cpp">
+    <ClCompile Include="src\cutility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="zredis.cpp">
+    <ClCompile Include="src\ini.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wintimer.cpp">
+    <ClCompile Include="src\INIReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\wintimer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zredis.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="credis.h">
+    <ClInclude Include="src\credisv2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cutility.h">
+    <ClInclude Include="src\cutility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zredis.h">
+    <ClInclude Include="src\ini.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="platformhead.h">
+    <ClInclude Include="src\INIReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="InterfaceDataStruct.h">
+    <ClInclude Include="src\platformhead.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wintimer.h">
+    <ClInclude Include="src\tpackage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\wintimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\zredis.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

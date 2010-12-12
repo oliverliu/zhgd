@@ -76,13 +76,13 @@ extern "C" {
 
 #ifdef WIN32 
 
-typedef int socklen_t; 
-
-typedef int ssize_t; 
+//typedef int socklen_t; 
+//
+//typedef int ssize_t; 
 
 #endif 
 
-#define DEBUG(x) 
+//#define DEBUG  printf 
 
 /* handle to a Redis server connection */
 typedef struct _cr_redis* REDIS;

@@ -1,0 +1,140 @@
+[Assumption]
+    1. Terminal's ip information readed from configure file, such as 
+      [ip] 
+      0x2000002="192.168.8.98" 
+    2. Terminal's sid, dbip, agentip readed from configure file
+    3. The configure file will be given from HD team in future.
+    4. Big endian
+       The message in db and network package is big endian.
+       Now support big and little endian format.
+       4.1. Using mac define _USING_BIG_ENDIAN that means input / ouput data is
+            big endian. 
+       4.2. Determine if swap byte sequence method: the local machine byte 
+            sequence is equal to _USING_BIG_ENDIAN, swap do not need. 
+    5. Little package has msg header or not?
+       对大包进行分解的时候，无法得知小包是否含有msgheader？ 
+       解决方法： 通过UID里面的dataType来判断，
+       目前如果dataType == 0110（6） 或者 1011（11）时，没有msgheader，其他默认
+       为有msg  header 
+    6. How to determine the destination for ATO/ATP, the destination can be
+       ATO/ATP or other external terminal
+       the method see below [ATO/ATP destination]
+    
+[Limits] 
+     1. If the before data in db is little endian, using lib of big endian, 
+        the program caused to be crashed. that is to say when data in db and lib
+        endian are different, the crash will not stop until the data in db pop 
+        finished. 
+
+[To Improve]
+     1. For ATO/ATP, how to determine RS2ATo or RS2ATP? Can we get from SID in
+        little package directly?
+     2. For cross-platform we need MACRO to indentify platform id, that needs
+        defines unifyly. Maybe we can follow DCS team, becuase we used them lib 
+        :-).       
+
+[Lessons Learn]
+     1. For forein lib and .h files internal, need release note before work.
+
+====================================================================
+[Attachement]
+     1. configure file sid.config, its content as below
+
+        #SID map to ip for connect
+        [ip]
+        0x20000002=192.168.10.222
+        0x20000001=192.168.10.221
+        0x20000003=192.168.10.223
+
+        #for determine destination
+        [SID2Internal]
+        0x1234=0x00000001;   #ATS1
+        0x2345=0x20000001;   #ZC1
+        0x3456=0x40000001;   #ATO1
+        0x4567=0x60000001;   #ATP1
+        0x5678=0x80000001;   #RS1
+        0x6789=0xA0000001;   #CBI1
+        0x7890=0xC0000001;   #PLAT1
+        0x7891=0xE0000001;   #TOD1
+
+        [self]
+        SID=0x1234
+        dbip=192.168.20.100
+        agentip=192.168.20.100
+        
+        port information maybe added in future.
+        
+ [ATO/ATP destination]
+       DID in little package value is dstID, UID in little package is uid.
+       The psudo-code as below
+       
+       The Write process:  
+          if ( dstID & 0xE0000000 ) == 0x80000000) 
+          {
+             switch(uid)
+             {
+                 case 0x0D000000: //表示电流输出数据的ID
+                    do;
+                    break;
+                 case 0x09010000:// /*ATP发送给列车IO输出板1的数据单元ID*/
+                    do;
+                    break;
+                 case 0x09020000: // /*ATP发送给列车IO输出板2的数据单元ID*/
+                    do;
+                    break;
+                 case 0x09030000: // /*ATP发送给列车IO输出板3的数据单元ID*/
+                    do;
+                    break;
+                 default:
+                 break;
+            }
+          }
+         
+         The read process:
+         SID in little package value is m_srcID, the m_srcID is gotten from 
+         configure file just because the terminal want to get content in db 
+         at first time.
+         for ATO/ATP the m_srcID has a mapped relationship in configure file.
+          [SID2Internal]
+          0x1234=0x00000001;   #ATS1
+          0x2345=0x20000001;   #ZC1
+          0x3456=0x40000001;   #ATO1
+          0x4567=0x60000001;   #ATP1
+          0x5678=0x80000001;   #RS1
+          0x6789=0xA0000001;   #CBI1
+          0x7890=0xC0000001;   #PLAT1
+          0x7891=0xE0000001;   #TOD1
+
+          [self]
+          SID=0x1234
+          
+          The self->SID is given by terminal client, we get 0x1234 and then find 
+          it in SID2Internal section and get 0x00000001 that is used in program.
+          But I think the map relation is not needed, we always have a solution 
+          to determine source terminal from SID.
+          
+          The psudo-code as below：
+          switch ( m_srcID & 0xE0000000 )) 
+          {
+             case 0x60000000: //Rs to atp
+                do;
+                break;
+             case 0x40000000:// Rs to ato
+                do;
+                break;
+             default:
+             break;
+            
+          }
+         
+          
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
