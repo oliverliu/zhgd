@@ -232,9 +232,10 @@ PLAT_UINT32 CUtility::setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_U
  void CUtility::outputLittlepack(const unsigned char * buffer)
  {
     //print out little package info
-    printf("Now package: unitId = %08x, unitSize = %d, data:\n", 
-            CUtility::getLittlePackUID(buffer), CUtility::getLittlePackDataSize(buffer));
     PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
+    printf("Now package: unitId = %08x, unitSize = %d, data:\n", 
+            CUtility::getLittlePackUID(buffer), size);
+    
     for(PLAT_UINT32 j = 0;j < size; j++)
     {
             printf("%02x  ", buffer[j]);

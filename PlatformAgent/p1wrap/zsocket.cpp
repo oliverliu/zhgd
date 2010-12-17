@@ -12,6 +12,9 @@
 
 
 using namespace std;
+
+#define ASSERT_SOCKID(id) {if(id <= 0) return false;}
+
  string toString(long long_address)
  {
     string ret;
@@ -25,10 +28,11 @@ using namespace std;
  // buffer is little endian
  void ZSocket::outputLittlepack(const unsigned char * buffer)
  {
+    PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
     //print out little package info
     plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
-            CUtility::getLittlePackUID(buffer), CUtility::getLittlePackDataSize(buffer));
-    PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
+            CUtility::getLittlePackUID(buffer),size);
+    
     for(PLAT_UINT32 j = 0;j < size; j++)
     {
             plog("%02x  ", buffer[j]);
@@ -374,7 +378,7 @@ int ZSocket::connectDb()
     
 }
 
-#define ASSERT_SOCKID(id) {if(id <= 0) return false;}
+
 
 bool ZSocket::canWrite(int sockId,int seconds )
 {
@@ -477,6 +481,15 @@ int ZSocket::getSockIDFromID(int id)
         ret = it->second;
     }
 
+    if ( ret == -1)
+    {
+       plog("Failed: Get socketID from ID\n");
+       for( it = m_mapLongIP2SockId.begin(); it != m_mapLongIP2SockId.end(); ++it)
+       {
+          plog("Now IP2sockid Map %s-%d", toString(it->first).c_str(), it->second);
+       }
+       plog("\n"); 
+    }
     return ret;
 }
 
@@ -745,8 +758,9 @@ int ZSocket::procTransferCtrl(const char * buffer)
     
     char dd[22] = "\0";
     memcpy(dd, buffer, strlen(msghead));
-    plog("data: %s,", dd);
+    //plog("data: %s,", dd);
 
+    plog("Recevied data from other terminal ");
     s_packinfo pack;
     getPackinfo(pack,msgLittleBuf);
 
@@ -777,7 +791,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
     }
     else
     {
-        plog("Error: In procTransferCtrl, did = %d, sockidTo = %d, do not write out!\n",
+        plog("Error: In procTransferCtrl, did = %08x, sockidTo = %d, do not write out!\n",
               pack.did, sockidTo);
     }
     return byteSent;
@@ -952,8 +966,14 @@ void ZSocket::dealWithData(     int listnum     )
            getPackinfo(pack,buffer);
 
             //the data is from other terminals, push it to db
-            // the did should be equal selfID
-           m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
+           if ( (pack.did &0xE0000000) == 0xc0000000)
+           {
+               plog("Message to CC from other terminal\n");
+               m_pRedis->app_rpush( (pack.did & 0x1fffffff) | 0x60000000, (const unsigned char*) buffer);//atp
+               m_pRedis->app_rpush( (pack.did & 0x1fffffff) | 0x40000000, (const unsigned char*) buffer);//ato
+           }
+           else
+              m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
        }
   }//safeSocket_recv else end
 }

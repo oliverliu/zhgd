@@ -35,8 +35,10 @@ public:
 	virtual PLAT_INT32		AppWrite();                                                                            
 	virtual PLAT_INT32		AppRead(); 
 	virtual PLAT_INT32		AppClose();
-	void			        InitSrcId();
-	PLAT_INT32		        GetSrcId();
+	void			              InitSrcId();
+	PLAT_INT32		       GetSrcId();
+
+	void                             setLog(const char* file);
 
 protected:
 	void			procConnectState(PLAT_UBYTE* p);
@@ -48,16 +50,14 @@ protected:
 	PLAT_UINT32     getPlatformID( PLAT_UINT32 srcid);
 
 	void                write2PlatBuffer(PLAT_UBYTE*  ppack);
-    void                write2DbBuffer(PLAT_UBYTE*  ppack);
+       void                write2DbBuffer(PLAT_UBYTE*  ppack);
 	void                updatePlatBuffer(PLAT_UBYTE*  ppack);
-    void                updateDbBuffer(PLAT_UBYTE*  ppack);
+       void                updateDbBuffer(PLAT_UBYTE*  ppack);
 
 	//void                initPackage(PLAT_UBYTE*  ppack, PLAT_UINT len, int type, int value);//len is T_UNIT_HEADE.size
 	void                initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, int connectvalue);
-
-   
 	
-    void                unInitPackage(PLAT_UBYTE* ppack);
+       void                unInitPackage(PLAT_UBYTE* ppack);
 
 	void			newPackage(int type);
 	void			write2PlatBuffer();
@@ -65,9 +65,11 @@ protected:
 	PLAT_INT32	    AppRead(char *);
 	void			OutputUint(PLAT_UINT8 * ,int);	//output help function								
 
-    void            setLog(const char* file);
+   
     void            plog(const char* format, ...);
     void            outputPackage(const PLAT_UBYTE * buf);
+    void            outputLittlepack(const PLAT_UBYTE * buf);
+
 
 protected:															
 	ZRedis*                 m_pRedis;

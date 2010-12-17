@@ -11,6 +11,8 @@
 #include "wintimer.h"
 #include "INIReader.h"
 
+#define PLATUNITID(sid, did)  (sid & did << sizeof(PLAT_UINT32))
+
 int msglevel = 3; /* the higher, the more messages... */
 
 #if defined(NDEBUG) && defined(__GNUC__)
@@ -189,15 +191,23 @@ void CAppInterface::outputPackage(const PLAT_UBYTE * bigpack )
     {
         plog("NO.%2d package: ", i);
         PLAT_UBYTE * unit = CUtility::getUnitHead(buf, i);
-        plog("unitId = %08x, unitSize = %d, data:\n", 
-               CUtility::getLittlePackUID(unit), CUtility::getLittlePackDataSize(unit));
-        PLAT_UINT32 size = CUtility::getLittlePackSize(unit);
-        for(PLAT_UINT32 j = 0;j < size; j++)
-        {
-                plog("%02x  ", unit[j]);
-        }
-        plog("\n");
+        outputLittlepack((const unsigned char*) unit);
     }
+}
+
+void CAppInterface::outputLittlepack(const unsigned char * buffer)
+{
+   //print out little package info
+   PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
+   
+   plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
+           CUtility::getLittlePackUID(buffer), size);
+   
+   for(PLAT_UINT32 j = 0;j < size; j++)
+   {
+           plog("%02x  ", buffer[j]);
+   }
+   plog("\n");
 }
 
 PLAT_INT32 CAppInterface::AppWrite()
@@ -239,6 +249,9 @@ PLAT_INT32 CAppInterface::AppWrite()
             // msg status changed from out to in, 
             // for value its vaule from 5 to 10
             procMsgOut(uintBuf);//need transfer it
+
+            plog("Want to transfer data ");
+            outputLittlepack((const unsigned char*)uintBuf);
 
             int lenpack = CUtility::getLittlePackSize((const unsigned char*)uintBuf);
             if (CUtility::needSwap())
@@ -466,8 +479,6 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, in
 //        }
 //}
 
-#define PLATUNITID(sid, did)  (sid & did << sizeof(PLAT_UINT32))
-
 void CAppInterface::write2PlatBuffer(PLAT_UBYTE*  ppack)
 {
     //ensure platBuf has index structure. Ensure the data pointer is after size pointer!
@@ -545,14 +556,14 @@ void CAppInterface::procInputAppStatus(PLAT_UBYTE* p)
 void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 {
     plog("Before: Uid input is %0x\n", CUtility::getLittlePackUID(p));
-    CUtility::outputLittlepack(p);
+    outputLittlepack(p);
     
     PLAT_UINT32 newUid = CUtility::setBitsVal(CUtility::getLittlePackUID(p), 
         24,29, 5);//0000110
     memcpy(p, &newUid, sizeof(PLAT_UINT32));
 
     plog("After: Uid output is %0x\n", CUtility::getLittlePackUID(p));
-    CUtility::outputLittlepack(p);
+    outputLittlepack(p);
 }
 
 //for doc v6, 2010.12

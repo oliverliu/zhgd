@@ -415,7 +415,7 @@ void CPackUtility::pushZC2CC_RoutinMsg()
 	memset(pArray, 0, 1024*8);
 	PLAT_UBYTE *ptmpH = pArray;
 
-    const PLAT_UINT32 did = 0x40000001;//to ato
+    const PLAT_UINT32 did = 0xc0000001;//to ato
     const PLAT_UINT32 sid = 0x20000001;
 
 	T_UNIT_HEAD     unithead;
