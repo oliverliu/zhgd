@@ -76,9 +76,9 @@ int ZRedis::app_sleep()
     char *val = NULL;
     credis_get(m_pRedis, "SLEEP", &val);
     if(val != NULL)
-            return atoi(val);       
+       return atoi(val);       
     else 
-            return 0;
+       return 0;
 }
 
 int ZRedis::app_step(char *src)
@@ -86,9 +86,9 @@ int ZRedis::app_step(char *src)
     char *val = NULL;
     credis_getset(m_pRedis, src, "0", &val);
     if(val != NULL)
-            return atoi(val);       
+       return atoi(val);       
     else 
-            return 0;
+       return 0;
 }
 
 int ZRedis::app_rpush(int keyid, const PLAT_UINT8* content)
@@ -118,9 +118,7 @@ int ZRedis::app_lpop(int keyid, PLAT_UINT8* outbuf)
 int ZRedis::app_rpush(char *key, const PLAT_UINT8* content)
 {
     app2db(content,m_charBuf);
-    credis_rpush(m_pRedis, key, m_charBuf);
-        
-    return 0;
+    return credis_rpush(m_pRedis, key, m_charBuf);
 }
 
 int ZRedis::app_llen(const char *dst)
@@ -181,7 +179,7 @@ int ZRedis::app_get(const char *key, PLAT_UINT8* outbuf)
 {
     char *val = NULL;
         
-    int ret = 0;
+    int ret = -1;
     ret = credis_get(m_pRedis,key,&val);
     if(val != NULL)
     {
@@ -195,38 +193,38 @@ int ZRedis::app_get(const char *key, PLAT_UINT8* outbuf)
 void ZRedis::app2db(const PLAT_UINT8* appdata, char* dbbuf)
 {
     int i;
-        memset(dbbuf,'\0',CHARSIZE);
-        for(i = 0;i < SIZE;i ++)
-        {
-                if(appdata[i] == 0)
-                {
-                        dbbuf[i] = 1;
-                        dbbuf[i+SIZE] = 1;
-                }
-                else
-                {
-            dbbuf[i] = 2; //could not use 0, because string end of 0
-                        dbbuf[i+SIZE] = appdata[i];
-                }
-        }
+    memset(dbbuf,'\0',CHARSIZE);
+    for(i = 0;i < SIZE;i ++)
+    {
+            if(appdata[i] == 0)
+            {
+                    dbbuf[i] = 1;
+                    dbbuf[i+SIZE] = 1;
+            }
+            else
+            {
+        dbbuf[i] = 2; //could not use 0, because string end of 0
+                    dbbuf[i+SIZE] = appdata[i];
+            }
+    }
     return;
 }
 
 //appdata size max is SIZE
 void ZRedis::db2app(const char* dbbuf, PLAT_UINT8* appdata)
 {
-        PLAT_UINT8 u;
+    PLAT_UINT8 u;
 
-        for(int i = 0;i < SIZE;i ++)
-        {
-                u = (PLAT_UINT8) dbbuf[i];
-                if(u == 1)
-                {
-                        appdata[i] = 0;
-                }
-                else
-                {
-                        appdata[i] = (PLAT_UINT8)dbbuf[i+SIZE];
-                }
-        }
+    for(int i = 0;i < SIZE;i ++)
+    {
+            u = (PLAT_UINT8) dbbuf[i];
+            if(u == 1)
+            {
+                    appdata[i] = 0;
+            }
+            else
+            {
+                    appdata[i] = (PLAT_UINT8)dbbuf[i+SIZE];
+            }
+    }
 }

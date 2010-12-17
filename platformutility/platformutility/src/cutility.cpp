@@ -308,8 +308,8 @@ PLAT_UINT32 CUtility::getSrcIDInternal()
        printf( "Can't load 'private.config'\n");
        return 0;
     }
-    std::string key = reader.Get("self","SID","");  
-    long value = reader.GetInteger("SID2Internal",key,0);
+    long value = reader.GetInteger("self","SID",0);
+   // long value = reader.GetInteger("SID2Internal",key,0);
 
     return value;
 }
@@ -324,6 +324,14 @@ PLAT_UINT32 CUtility::getLittlePackDataType(const PLAT_UBYTE * littlepack)
     //return m_header.unitId & 0x3F000000; 
 }
 
+// id Bit 23 - Bit 16
+// get package data info from uint id
+PLAT_UINT32 CUtility::getLittlePackDataInfo(const PLAT_UBYTE * littlepack)
+{
+    PLAT_UINT32 uid = getLittlePackUID(littlepack);
+    return getBitsVal(uid, 16,23);
+}
+
 // littlepack is little endian
 // Only communication msg out has msg head
 bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
@@ -334,11 +342,12 @@ bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
     switch(dtype)
     {
         case 6://000110 link state data
-        case 11://001011 link control data
+        case 0xb://001011 link control data
         {
             ret = false;
         }
-       case 10://001010 communication msg out
+        break;
+       case 0xa://001010 communication msg out
        case 5://000101 communication msg in
             ret = true;
         break;
@@ -346,6 +355,40 @@ bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
             break;
     }
    return ret;
+}
+
+
+PLAT_UINT32 CUtility::getLinkStateDID(PLAT_UBYTE*  plinkstatePack)
+{
+    typedef struct connectStateData
+    {
+        PLAT_UBYTE result;
+        PLAT_UBYTE resver1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT  resver2[2];
+    }tConStateData;
+
+    tConStateData st;
+    memcpy(&st, plinkstatePack, sizeof(tConStateData));
+    return st.did;
+
+}
+
+PLAT_UINT32 CUtility::getLinkStateSID(PLAT_UBYTE*  plinkstatePack)
+{
+    typedef struct connectStateData
+    {
+        PLAT_UBYTE result;
+        PLAT_UBYTE resver1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT  resver2[2];
+    }tConStateData;
+
+    tConStateData st;
+    memcpy(&st, plinkstatePack, sizeof(tConStateData));
+    return st.sid;
 }
 
 PLAT_UINT32 CUtility::getLittlePackUID(const PLAT_UBYTE * littlepack)
@@ -368,6 +411,12 @@ PLAT_UINT32 CUtility::getLittlePackSID(const PLAT_UBYTE * littlepack)
         memcpy(&messageHead, littlepack + sizeof(T_UNIT_HEAD), sizeof(T_MESSAGE_HEAD) );
         ret = messageHead.SID;
     }
+    else
+    {
+       //littlepack has not message heade
+       //using terminal's ID as its SID
+       ret = getSrcIDInternal();
+    }
 
     return ret;
 }
@@ -376,7 +425,7 @@ PLAT_UINT32 CUtility::getLittlePackDID(const PLAT_UBYTE * littlepack)
 {
     PLAT_UINT32 ret = 0;
         
-    if ( hasMsgHead(littlepack))
+    if ( hasMsgHead(littlepack))//datatyep = 0x5 or 0xa
     {
         T_MESSAGE_HEAD messageHead;
         memcpy(&messageHead, littlepack + sizeof(T_UNIT_HEAD), sizeof(T_MESSAGE_HEAD) );
@@ -392,12 +441,27 @@ PLAT_UINT32 CUtility::getLittlePackDID(const PLAT_UBYTE * littlepack)
             PLAT_UINT32 srcId    =  CUtility::getLittlePackSID(littlepack);
             switch (datatype)
             {
+                    case 0x10: //analog output data
+                    case 0x11://TMS communication data
+                    case 0x9://output board data
+                        ret = srcId & 0xffffffff | 0x80000000;
+                    break;
+
                     case 7://000111; atp 2 ato data; ato is 0x40000x
                         ret = srcId & 0x0fffffff | 0x40000000;
                     break;
+
                     case 8: //001000; ato 2 atp data; atp is 0x6000000X
                         ret = srcId & 0x0fffffff | 0x60000000;
                     break;
+
+                    case 0xf:// 1111; program internal stata sync data
+                    case 0xc://1100;event record data
+                    //case 0xb://1011; connect control data
+                    case 0xe://1110; db control command
+                           ret = srcId & 0xffffffff | 0xc0000000;
+                    break;
+                    
                     default:
                     break;
             }

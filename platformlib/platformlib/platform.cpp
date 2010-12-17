@@ -89,6 +89,7 @@ PLAT_INT32 CAppInterface::AppClose()
 
 PLAT_INT32 CAppInterface::AppInit()
 {
+    PLAT_INT32 ret = 0;
     send = APP_WRITE_ADDR;
     recv = APP_READ_ADDR;
 
@@ -121,6 +122,7 @@ PLAT_INT32 CAppInterface::AppInit()
     if (m_pRedis->connect(strDbvalue.c_str()) != true )
     {
         plog("Failed: terminal connect db! Should stop run down!\n");
+        ret = -1;
     }
 
     plog("Address: database = %s, agentip = %s, self SID = %0x\n",
@@ -130,10 +132,11 @@ PLAT_INT32 CAppInterface::AppInit()
     if( m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
     {
         plog("Failed: Socket client connect agent server\n");
+        ret = -1;
     }
     //app_init(uintBuf,s_host);
 
-    return 0;
+    return ret;
 }
 
 PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,char *host)
@@ -237,13 +240,14 @@ PLAT_INT32 CAppInterface::AppWrite()
             // for value its vaule from 5 to 10
             procMsgOut(uintBuf);//need transfer it
 
+            int lenpack = CUtility::getLittlePackSize((const unsigned char*)uintBuf);
             if (CUtility::needSwap())
             {
                 //little to big endian for output to db
                 CUtility::littlePackToBE(uintBuf);
             }
             m_pRedis->app_rpush(dstID, uintBuf);   
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf);
+            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf, lenpack);
             continue;
         }
         else if (parser.isConnectControl())
@@ -271,6 +275,7 @@ PLAT_INT32 CAppInterface::AppWrite()
             continue;
         }
 
+        int lenpack = CUtility::getLittlePackSize(uintBuf);
         //other type message
         if (CUtility::needSwap())
         {
@@ -278,27 +283,36 @@ PLAT_INT32 CAppInterface::AppWrite()
             CUtility::littlePackToBE(uintBuf);
         }
 
-        if((dstID&0x00000FF0)==0x00000FF0)				//说明目的地为CC，此时应该将对应的ATP和ATO中同时压入内容
+        //If destination terminal is CC, Now push little package into ATP and 
+        // ATO respectively
+        if((dstID&0x00000FF0)==0x00000FF0)
         {
             plog("This is destination is CC\n");
-            dstID =(dstID&0x1000000F)|0x60000000;       //将目的地修改为ATP
-            //sprintf(dst,"%08x",dstID);
+            //ATP
+            dstID =(dstID&0x1000000F)|0x60000000;       
             m_pRedis->app_rpush(dstID, uintBuf);
-            //app_rpush(dst);
 
-            dstID =(dstID&0x1000000F)|0x40000000;        //将目的地修改为ATO
-            //sprintf(dst,"%08x",dstID);
+            //ATO
+            dstID =(dstID&0x1000000F)|0x40000000; 
             m_pRedis->app_rpush(dstID, uintBuf); 
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf);
+            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,lenpack);
         }
         else
         {
             plog("This is other type msg, we do not proc the type msg for now\n");
-            /*将数据包中各数据单元压入相应目的地ID的缓冲区中*/   
+            plog("push to db key = %08x\n", dstID);
+            //push little package into correspond destination ID buffer in DB
             m_pRedis->app_rpush(dstID, uintBuf); 
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf);
+            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,lenpack);
         }
     }//end of for
+
+    if(CUtility::needSwap())
+    {
+        //restore content, little endian to big
+        CUtility::bigPackToBE(send);
+    }
+
     return 0;
 }
 
@@ -350,7 +364,7 @@ void CAppInterface::unInitPackage(PLAT_UBYTE* _ppack)
     //}
 }
 
-//init unit package
+//init connect state unit package
 void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, int connectvalue)
 {
     typedef struct connectStateData
@@ -385,7 +399,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, in
         {
             ppack->unitId = 0;
             ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
-            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
             ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x23
             ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
             ppack->unitId = ppack->unitId;
@@ -395,7 +409,7 @@ void CAppInterface::initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, in
     {
         ppack->unitId = 0;
         ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
-        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
         ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x20
         ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 
@@ -488,18 +502,27 @@ void CAppInterface::updatePlatBuffer(PLAT_UBYTE*  ppack)
 
 }
 
-
 void CAppInterface::updateDbBuffer(PLAT_UBYTE*  ppack)
 {
-    PLAT_UINT64 id = PLATUNITID(CUtility::getLittlePackSID(ppack),
-             CUtility::getLittlePackDID(ppack));
+    PLAT_UINT32 sid = CUtility::getLinkStateSID(ppack);
+
+    if (sid != m_srcID)
+    {
+        plog("Warning: the sid = %0x in link state result is NOT equal m_srcID = %0x\n",
+            sid, m_srcID);
+    }
+
+    PLAT_UINT64 id = PLATUNITID(sid,
+            CUtility::getLinkStateDID(ppack));
 
     PLAT_UINT32 count = CUtility::getUnitCounts(m_dbBuf);
     for (int i = 0; i < count; i++)
     {
         PLAT_UBYTE * unit = CUtility::getUnitHead(m_dbBuf, i);
-        PLAT_UINT64 idsrc = PLATUNITID(CUtility::getLittlePackSID(unit),
-            CUtility::getLittlePackDID(unit));
+
+        //get link control did
+        PLAT_UINT64 idsrc = PLATUNITID(CUtility::getLinkStateSID(unit),
+            CUtility::getLinkStateDID(unit));
         if (idsrc == id)
         {
             //update the unit data
@@ -564,7 +587,7 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
             //create connect command
             int ret = 1;
             if ( m_bUseP1 ) 
-                ret = m_pSockClient->connectTermianl(dstID) == -1 ? 0 : 1;
+                ret = m_pSockClient->connectTermianl(dstID) == 1 ? 1 : 0;
                     
             initPackage(pack,dstID, 0,ret);
             CUtility::pushBackPack(m_dbBuf, pack);
@@ -574,10 +597,11 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
         {
             plog("Connect Remove\n");
             int ret = 1 ;
-            if ( m_bUseP1 ) ret = m_pSockClient->disconnectTermianl(dstID);
+            if ( m_bUseP1 ) ret = m_pSockClient->disconnectTermianl(dstID) == 1 ? 1 : 0;;
 
             initPackage(pack,dstID, 1,ret);
-            CUtility::pushBackPack(m_dbBuf, pack);
+            updateDbBuffer(pack);
+            //CUtility::pushBackPack(m_dbBuf, pack);
             //m_pzc->updateNotifyTerminal(dstID, false);
         }
         break;
@@ -728,24 +752,23 @@ PLAT_INT32 CAppInterface::AppRead()
 
     if (m_srcID == 0)
         return 0;
-    else
-    {
-        sprintf(src, "%08x", m_srcID);
-    }
+    
+	sprintf(src, "%08x", m_srcID);
+    
 
     char srccc[11];
     sprintf(srccc,"%s",src);
     while((m_pRedis->app_run() >0) && (m_pRedis->app_step(srccc) ==0))
     {
-        PlatformSleep(10);  /*休眠10ms*/      
+        /*休眠10ms*/      
+        PlatformSleep(10);                         
     }
     
     len = m_pRedis->app_llen(src);
     for(j =0;j <len;j++)
     {
         memset(&uintBuf, 0x00, SIZE);
-        // m_pRedis->app_lpop(src, uintBuf);	
-        m_pRedis->app_lpop(m_srcID, uintBuf);
+         m_pRedis->app_lpop(m_srcID, uintBuf);
 
         if(CUtility::needSwap())
         {
@@ -770,7 +793,7 @@ PLAT_INT32 CAppInterface::AppRead()
     }
 
     //------------------------------
-    //get db data that is through app_set  into db, now get it.
+    //get db data that is through app_set  in db, now get it.
     CUtility::initBigPackIdx(m_dbBuf);
     m_pRedis->app_get("linkstate", m_dbBuf);//Maybe m_dbBuf can not through db channel.
     unitCounts = CUtility::getUnitCounts(m_dbBuf);
@@ -779,6 +802,18 @@ PLAT_INT32 CAppInterface::AppRead()
         PLAT_UBYTE * p = CUtility::getUnitHead(m_dbBuf, idx);
         CUtility::pushBackPack(recv, p);
     }
+
+    //get link state from db temporary for 1220 release
+    PLAT_UINT8 _linkBuf[64] = "\0";
+    int ret = m_pRedis->app_get("link1", _linkBuf);
+    if(ret != 0)
+        CUtility::pushBackPack(recv, _linkBuf);
+    plog("App_get link1 return value = %d, 0:have value, -1: no value;\n", 
+ret);
+
+    ret = m_pRedis->app_get("link2", _linkBuf);
+    if(ret != 0)
+        CUtility::pushBackPack(recv, _linkBuf);
 
     //debug
     plog("Read data: read Addr: %0x\n", recv);

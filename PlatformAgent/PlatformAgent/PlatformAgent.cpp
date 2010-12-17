@@ -20,7 +20,7 @@ int main (int argc, char **argv)
 
     ZSocket server;
     //server.setLog("agent_server.log");
-    server.setLog(); 
+    server.setLog();  
     
     bool bdb = server.connectDb(); 
     

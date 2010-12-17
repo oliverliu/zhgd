@@ -9,14 +9,13 @@
    3.1 Information about sid map to ip is gotten from config file.
 
 4. Using method for client
-   4.1 please add a member variable ZSocket instance and m_sockId between it and server. such as
-       add 2 member variables in your lib class.
+   4.1 please add a member variable ZSocket instance 
 
-       ZSocketClient* client =  new ZSocketClient();
+       ZSocketClient* m_pSockClient-=  new ZSocketClient();
 
    4.3 connect db and server
        
-       sockId = client->connectServer("127.0.0.1",1086,3);
+       sockId = m_pSockClient->connectServer("127.0.0.1",1086,3);
        if (sockId <= 0)
        {
          printf("Failed: connect server\n");
@@ -27,13 +26,20 @@
     	 }
     
    4.4 When client want to connect another terminal which id is did;
-       client->connectTermianl(did)
+	      a. int ret = m_pSockClient->connectTermianl(dstID) == 1 ? 1 : 0;
+	          connectTermianl 返回值有三种，1表示成功，0表示失败，-1表示网络问题
+        b. 将连接状态组成小包p
+        c. 将p放在连接控制的大包bigP后面
+        d. 将连接控制的大包 app_set("linkstate", bigP); 
+        注意：连接控制结果会在read的时候读出。
        
    4.5 When client want to disconnect another terminal which id is did;
-       client->disconnectTermianl(did)
+       a. client->disconnectTermianl(did)
+       b. 更新相应的结果
+       
 
    4.6 When client want to agent transfer message to other terminal
-       client->transferTerminal(plittlepackcontent);
+       client->transferTerminal(plittlepackcontent，lenpack);
            
 
        

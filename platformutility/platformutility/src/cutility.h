@@ -49,6 +49,7 @@ public:
 		
 	static bool        hasMsgHead(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackDataType(const PLAT_UBYTE * littlepack);
+	static PLAT_UINT32 getLittlePackDataInfo(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackUID(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackSID(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackDID(const PLAT_UBYTE * littlepack);
@@ -56,6 +57,8 @@ public:
 	static PLAT_UINT32 getLittlePackSize(const PLAT_UBYTE* littlepack);//including head
 	static bool updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littlepackDst);
 
+    static PLAT_UINT32 getLinkStateDID(PLAT_UBYTE*  plinkstatePack);
+    static PLAT_UINT32 getLinkStateSID(PLAT_UBYTE*  plinkstatePack);
 	//Big package
 	static PLAT_UINT32 getUnitCounts(const PLAT_UBYTE* bigPackHead);
 	static PLAT_UBYTE* getUnitHead(const PLAT_UBYTE* bigPackHead, PLAT_UINT32 indx); //start from 0;

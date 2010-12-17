@@ -9,8 +9,8 @@
 extern  unsigned char APP_READ_ADDR[NETSIZE];
 extern  unsigned char APP_WRITE_ADDR[NETSIZE];
 
-extern void InitPlatformInterface ();
-extern void ReadFormPlatform ();
-extern void WriteToPlatform();
+extern signed int InitPlatformInterface ();
+extern signed int ReadFormPlatform ();
+extern signed int WriteToPlatform();
 
 #endif //_PLATFORM_INTERFACE

@@ -2,17 +2,17 @@
 
 CAppInterface g_appInter;
 
-void InitPlatformInterface ()
+signed int InitPlatformInterface ()
 {
-	g_appInter.AppInit();
+	return g_appInter.AppInit();
 }
 
-void ReadFormPlatform ()
+signed int ReadFormPlatform ()
 {
-	g_appInter.AppRead();
+	return g_appInter.AppRead();
 }
 
-void WriteToPlatform()
+signed int WriteToPlatform()
 {
-	g_appInter.AppWrite();
+	return g_appInter.AppWrite();
 }

@@ -210,11 +210,11 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
        int errNumber = safeSocket_getErrorNum (sockid);
        plog ("connect failed, errNumber = %u\n", errNumber);
 	   
-	   #ifdef Q_WS_WIN
-       closesocket (sockid);
-	   #else
-	   close(sockid)
-	   #endif
+        #ifdef Q_WS_WIN
+        closesocket (sockid);
+        #else
+        close(sockid);
+        #endif
 	   
        return -1;
     }
@@ -539,8 +539,12 @@ int ZSocket::sendTransfer(int sockid,const char* data, int size, int flag)
     memcpy(buf, strdst.c_str(), strdst.length());
     memcpy(buf + strdst.length(), data, size);
 
-    plog("Want to transfer %d data\n",  strdst.length() + size);
-    outputLittlepack((const unsigned char*)data);
+    plog("Want to transfer %d data at original style selftransfer\n",  strdst.length() + size);
+    for(PLAT_UINT32 j = 0;j < size; j++)
+    {
+            plog("%02x  ", data[j]);
+    }
+    plog("\n");
 
     return write(sockid, buf, strdst.length() + size, flag);
 }
@@ -743,8 +747,6 @@ int ZSocket::procTransferCtrl(const char * buffer)
     memcpy(dd, buffer, strlen(msghead));
     plog("data: %s,", dd);
 
-    outputLittlepack((const unsigned char*)msgLittleBuf);
-
     s_packinfo pack;
     getPackinfo(pack,msgLittleBuf);
 
@@ -781,6 +783,64 @@ int ZSocket::procTransferCtrl(const char * buffer)
     return byteSent;
 }
            
+
+//init connect state unit package
+void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,const unsigned int sid, int type, int connectvalue)
+{
+    typedef struct connectStateData
+    {
+        PLAT_UBYTE result;
+        PLAT_UBYTE resver1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT  resver2[2];
+    }tConStateData;
+
+    T_UNIT* ppack = (T_UNIT*) _ppack;
+    tConStateData _connectStateData;
+    memset(&_connectStateData, 0, sizeof(tConStateData));
+
+    ppack->unitSize = sizeof(tConStateData);
+    ppack->unitData = ( PLAT_BYTE* )(_ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD));
+
+    char cv = 0xaa;
+    if (connectvalue == 1) //connect successful
+        cv = 0x55;
+
+    _connectStateData.result = cv;
+    _connectStateData.sid = sid;
+    _connectStateData.did = did;
+
+    memcpy(ppack->unitData, (const char*)&_connectStateData, sizeof(tConStateData));
+
+    switch (type)
+    {
+    case 0: //create connect
+        {
+            ppack->unitId = 0;
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x23
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
+            ppack->unitId = ppack->unitId;
+        }
+    break;
+    case 1: //remove connect
+    {
+        ppack->unitId = 0;
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x20
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
+
+        ppack->unitId = ppack->unitId;
+    }
+    break;
+    default:
+    break;
+    }
+}
+
 void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
 {
     unsigned char* buffer = (unsigned char*)_buffer;
@@ -791,14 +851,7 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
     }
 
     //print out little package info
-    plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
-            CUtility::getLittlePackUID(buffer), CUtility::getLittlePackDataSize(buffer));
-    PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
-    for(PLAT_UINT32 j = 0;j < size; j++)
-    {
-            plog("%02x  ", buffer[j]);
-    }
-    plog("\n");
+    outputLittlepack((const unsigned char*)buffer);
 
     packinfo.datatype = CUtility::getLittlePackDataType(buffer);
     packinfo.sid = CUtility::getLittlePackSID(buffer);
@@ -829,9 +882,10 @@ void ZSocket::dealWithData(     int listnum     )
     if ( recvlen < 0) 
     {
         // Connection closed, close this end and free up entry in connectlist 
-        plog("recv return %d< 0"
+        plog("recv return %d < 0 , getLastErro = %d "
              "Connection lost: FD=%d;  Slot=%d, close the socket, ip = %s\n",
-             recvlen, sockId,listnum,getIPFromSockID(sockId).c_str());
+             recvlen, safeSocket_getErrorNum (sockId),
+             sockId,listnum,getIPFromSockID(sockId).c_str());
         plog("Now do nothing, maybe should close the socket\n");
         //safeSocket_close(sockId);
         // m_connectionList[listnum] = 0;
@@ -1056,13 +1110,13 @@ int ZSocketClient::transferTerminal(const unsigned int did, const char* littlepa
     return -1;
 }
 
-int ZSocketClient::transferTerminal(const char* littlepack)
+//The littlepack is bigendian sequence
+int ZSocketClient::transferTerminal(const char* littlepack,int lenpack)
 {
     plog("\nTerminal: transfer\n");
     if ( canWrite(m_sockId,3))
     {
         plog("Msg type: transfer are sent\n");
-        int lenpack = CUtility::getLittlePackSize((const unsigned char*)littlepack);
         int flag = 0;
         int len = sendTransfer(m_sockId,littlepack, lenpack,flag);
         if( len <=0 )

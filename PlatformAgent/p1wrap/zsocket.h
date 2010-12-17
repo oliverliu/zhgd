@@ -97,6 +97,9 @@ private:
     int procConnectCtrl(const char * buffer);
     int procDisconnectCtrl(const char * buffer);
     int procTransferCtrl(const char * buffer);
+
+    void initConnectState(const char *  _ppack, const unsigned int  did, const unsigned int  sid,
+                int type, int connectvalue);
 private:
 
     bool m_bInit;
@@ -122,8 +125,14 @@ public:
 
     int connectServer(const char *ip,int port = 1086, int timeout = -1);
     bool init();
-    int transferTerminal(const char* littlepack);//the did can be gotten from littlepack
+
+    int transferTerminal(const char* littlepack,int lenpack);//the did can be gotten from littlepack
     int transferTerminal(const unsigned int did, const char* littlepack);
+    
+    // return value:
+    // -1: network error
+    // 0: control failed
+    // 1: control succssful
     int disconnectTermianl(int did);
     int connectTermianl(int did);
 

@@ -110,8 +110,10 @@ int _tmain(int argc, _TCHAR* argv[])
     
     //ret =  client.disconnectTermianl(2);
     
-    ret =  client.transferTerminal("Absdsddddddddddddfsdfasdfc");
-    ret =  client.transferTerminal("A000bsdsdddddddd ddddfsdfasdfc");
+    char *s = "Absdsddddddddddddfsdfasdfc";
+    ret =  client.transferTerminal(s, strlen(s));
+    s =  "A000bsdsdddddddd ddddfsdfasdfc";
+    ret =  client.transferTerminal(s, strlen(s));
 
     printf("getchar to quit\n"); 
     getchar();
