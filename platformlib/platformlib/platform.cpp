@@ -203,16 +203,17 @@ void CAppInterface::outputLittlepack(const unsigned char * buffer)
    plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
            CUtility::getLittlePackUID(buffer), size);
    
-   for(PLAT_UINT32 j = 0;j < size; j++)
+   PLAT_UINT32 j = 0;
+   for(;j < size; j++)
    {
            plog("%02x  ", buffer[j]);
    }
-   plog("\n");
+   plog("print out %d \n", j);
 }
 
 PLAT_INT32 CAppInterface::AppWrite()
 {
-    if(CUtility::needSwap())
+   if(CUtility::needSwap())
     {
         //big endian to little
         CUtility::bigPackToLE(send);
@@ -222,110 +223,223 @@ PLAT_INT32 CAppInterface::AppWrite()
     plog("Write data: write Addr: %0x\n",send );
     outputPackage(send);
 
+
     if (m_srcID == 0)
     {
         plog("Warning: the client SID is 0, now get it from little package\n");
         PLAT_UBYTE *p = CUtility::getUnitHead(send, 0);
         m_srcID = CUtility::getLittlePackSID(p);
     }   
-    //sprintf(src, "%08x", srcID);	
-    sprintf(src, "%08x", m_srcID);	
+    //sprintf(src, "%08x", m_srcID);  
+    sprintf(src, "%08x", m_srcID);  
+
 
     int count = CUtility::getUnitCounts(send);
-    for(int j = 0;j < count;j++)          
-    {
+     
+    int boardId = 1;
+    for(int j = 0;j < count;j++)                  
+    {       
         PLAT_UINT8 * addr = CUtility::getUnitHead(send, j); // send+m_pei->index.unitAddrOffset[j]; 
         //memcpy(uintBuf, addr, sizeof(T_UNIT_HEAD)+m_pei->unitsize[j]);//include msg header
         memcpy(uintBuf, addr, CUtility::getLittlePackSize(addr) );//include msg header
 
         dstID = CUtility::getLittlePackDID(addr);
         sprintf(dst,"%08x",dstID);
-
+        plog("dstID = %s in No.%d package\n", dst, j);
+        
+        int len = CUtility::getLittlePackSize(uintBuf);
         //maybe update data in platform buffer  where the data is little endian
         CLittlePack parser(m_srcID, uintBuf);
-        if (parser.isMsgOut())
+        if (parser.isBroad()) // not supported for now temporary.
         {
-            plog("This is msg out data, we change it to msg in\n");
-            // msg status changed from out to in, 
-            // for value its vaule from 5 to 10
-            procMsgOut(uintBuf);//need transfer it
-
-            plog("Want to transfer data ");
-            outputLittlepack((const unsigned char*)uintBuf);
-
-            int lenpack = CUtility::getLittlePackSize((const unsigned char*)uintBuf);
-            if (CUtility::needSwap())
-            {
-                //little to big endian for output to db
-                CUtility::littlePackToBE(uintBuf);
-            }
-            m_pRedis->app_rpush(dstID, uintBuf);   
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf, lenpack);
-            continue;
-        }
-        else if (parser.isConnectControl())
-        {
-            plog("This is link ctrl\n");
-            //not need transfer
-            // connect / disconnet did, and recode result into platform buffer
-            procConnectControl(uintBuf); 
-            continue;
-        }
-        else if (parser.isBroad()) // not supported for now temporary.
-        {
-            plog("This is broadcast\n");
             //need transfer, DID process need specially process.
             // from message, DID can not be gotten, it always ffff for broadcast.
             // so need parameter DID that means msg format is selftransfer+did+msg content.
             procBroadMsg(uintBuf);
             continue;
         }
-        else if (parser.isInputAppStatus())
-        {
-            plog("This is input app status\n");
-            //just only recode it into platform buffer
-            procInputAppStatus(uintBuf);//not need transfer
-            continue;
-        }
+       
+         PLAT_UINT32 datatype =  CUtility::getLittlePackDataType(uintBuf);
+         switch (datatype)
+         {
+            case 0x2://0010; DB data
+            {
+              //fprintf(m_fpFromTerminalLog, "Message DB data\n");
+              plog( "Message DB data\n");
+            }
+            break;
+            case 0x7://0111; atp 2 ato
+            {
+             // fprintf(m_fpFromTerminalLog, "Message atp to ato\n");
+              plog("Message atp to ato\n");
+              PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
+              m_pRedis->app_rpush(did, uintBuf);
+             
+              continue;
+            }
+            break;
+            case 0x8://1000; ato 2 atp
+            {
+              plog("Message ato to atp\n");
+              PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
+              m_pRedis->app_rpush(did, uintBuf);
+             
+              continue;
+            }
+            break;
+            case 0x9://1001; output board data
+            {
+                plog("Message output board data\n");
+                char ctrl[IDSIZE+5] = "\0";
+                sprintf(ctrl, "%satoioctl", dst);
+                m_pRedis->app_set(ctrl, uintBuf);
+               
+                //PLAT_UINT32 datainfo = getLittlePackDataInfo(unitBuf);
+                //if (datainfo <= 0x1f)
+                //{
+                //    plog("This is VIO board output data\n");
+                //    char ctrl[IDSIZE+5] = "\0";
+                //    sprintf(ctrl, "%sioctlvio", dst);
 
-        int lenpack = CUtility::getLittlePackSize(uintBuf);
-        //other type message
+                //    PLAT_UINT8 ctrlbuf[SIZE] = "\0";                 
+                //    memcpy(ctrlbuf, uintBuf, sizeof(uintBuf));
+                //    m_pRedis->app_set(ctrl, ctrlbuf);
+                //}
+                //else if ( datainfo <= 0x3f)
+                //{
+                //    plog("This is NVIO board output data\n");
+                //    char ctrl[IDSIZE+5] = "\0";
+                //    sprintf(ctrl, "%sioctlnvio", dst);
+
+                //    PLAT_UINT8 ctrlbuf[SIZE] = "\0";                 
+                //    memcpy(ctrlbuf, uintBuf, sizeof(uintBuf));
+                //    m_pRedis->app_set(ctrl, ctrlbuf);
+                //}
+                //else
+                //{
+                //   plog("This is Error, datainfo = %0x, its max value is 
+                //   0x3f\n",  datainfo);
+                //}
+                continue;
+            }
+            break;
+            case 0x0a: //1010; msge output data
+            {
+                plog("Msg output data, we change it to msg in\n");
+                 // msg status changed from out to in, 
+                // for value its vaule from 5 to 10
+                procMsgOut(uintBuf);//need transfer it
+
+                plog("Want to transfer data ");
+                outputLittlepack((const unsigned char*)uintBuf);
+                if (CUtility::needSwap())
+                {
+                    //little to big endian for output to db
+                    CUtility::littlePackToBE(uintBuf);
+                }
+                m_pRedis->app_rpush(dstID, uintBuf);   
+                if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                continue;
+            }
+            break;
+            case 0xB: //1011; connection control data
+            {
+               plog("Msg link control data\n");
+                 //not need transfer
+                // connect / disconnet did, and recode result into platform buffer
+                procConnectControl(uintBuf); 
+                continue;
+            }
+            case 0xC://1100; Event record data
+            {
+              plog("Message Event record data\n");
+              //fprintf(m_fpFromTerminalLog, "Message Event record data\n");
+            }
+            break;
+            case 0xD: //1101; broad cast data
+            {
+                plog("Message broadcast data\n");
+                plog("For now ignore it, do nothing for this type msg\n");
+                //procBroadMsg(uintBuf);
+                continue;
+            }
+            case 0xE://1110; DB control data
+            {
+              //fprintf(m_fpFromTerminalLog, "Message DB control data\n");
+              plog( "Message DB control data\n");
+            }
+            break;
+            case 0xF: //1111; internal program state sync input data
+            {
+                plog("Msg internal program state sync input data\n");
+                 //just only recode it into platform buffer
+                procInputAppStatus(uintBuf);//not need transfer
+                continue;
+            }
+            break;
+            case 0x10 ://10000; analog output data
+            {
+                plog("Message analog output data\n");
+                 char ctrl[IDSIZE+5];
+                 memset(ctrl, 0, IDSIZE+5);
+                 //If destination is train simulation RS, then it is ATO, pull 
+                // contrl command, using app_set function    
+                sprintf(ctrl, "%sauctl", dst);
+                m_pRedis->app_set(ctrl, uintBuf);
+                continue;
+            }
+            break;
+            case 0x11://10001; TMS communication data
+            {
+                plog("Message TMS communication data\n");
+            }
+            break;
+            default: 
+            break;
+         }
+
+         //other type message
         if (CUtility::needSwap())
         {
             //little to big endian for output to db
             CUtility::littlePackToBE(uintBuf);
         }
-
+        
+        
         //If destination terminal is CC, Now push little package into ATP and 
         // ATO respectively
-        if((dstID&0x00000FF0)==0x00000FF0)
+        if ( (dstID &0xE0000000) == 0xc0000000)
+        //if((dstID&0x00000FF0)==0x00000FF0)
         {
             plog("This is destination is CC\n");
             //ATP
-            dstID =(dstID&0x1000000F)|0x60000000;       
-            m_pRedis->app_rpush(dstID, uintBuf);
+            m_pRedis->app_rpush( (dstID & 0x1fffffff) | 0x60000000, uintBuf);//atp
+            m_pRedis->app_rpush( (dstID & 0x1fffffff) | 0x40000000,uintBuf);//ato
+                   
+            //dstID =(dstID&0x1000000F)|0x60000000;       
+            //m_pRedis->app_rpush(dstID, uintBuf);
 
             //ATO
-            dstID =(dstID&0x1000000F)|0x40000000; 
-            m_pRedis->app_rpush(dstID, uintBuf); 
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,lenpack);
+            //dstID =(dstID&0x1000000F)|0x40000000; 
+            //m_pRedis->app_rpush(dstID, uintBuf); 
         }
         else
         {
-            plog("This is other type msg, we do not proc the type msg for now\n");
+            plog("Default proc for other type msg, just push it and transfer it\n");
             plog("push to db key = %08x\n", dstID);
             //push little package into correspond destination ID buffer in DB
             m_pRedis->app_rpush(dstID, uintBuf); 
-            if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,lenpack);
         }
+        if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);    
     }//end of for
-
+ 
+    //restore write buffer data
     if(CUtility::needSwap())
     {
-        //restore content, little endian to big
+        // to big endian
         CUtility::bigPackToBE(send);
     }
-
+    
     return 0;
 }
 
@@ -556,14 +670,14 @@ void CAppInterface::procInputAppStatus(PLAT_UBYTE* p)
 void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 {
     plog("Before: Uid input is %0x\n", CUtility::getLittlePackUID(p));
-    outputLittlepack(p);
+    //outputLittlepack(p);
     
     PLAT_UINT32 newUid = CUtility::setBitsVal(CUtility::getLittlePackUID(p), 
         24,29, 5);//0000110
     memcpy(p, &newUid, sizeof(PLAT_UINT32));
 
     plog("After: Uid output is %0x\n", CUtility::getLittlePackUID(p));
-    outputLittlepack(p);
+    //outputLittlepack(p);
 }
 
 //for doc v6, 2010.12
@@ -706,36 +820,34 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 
 void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
 {
-        CLittlePack parser(m_srcID, p);
+    CLittlePack parser(m_srcID, p);
+       
+    std::list<PLAT_UINT32> dstIDlist = m_pzc->getNotifyTerminals();
+    std::list<PLAT_UINT32>::iterator it;
+    for( it = dstIDlist.begin(); it != dstIDlist.end(); ++it )
+    {
+        //push to db
+        memset(&uintBuf, 0x00, SIZE);
 
-        //if (parser.isBroad())
+        PLAT_UINT32 len = CUtility::getLittlePackSize(p);
+        PLAT_UINT32 did = CUtility::getLittlePackDID(p); //should equal to ffff
+        if (CUtility::needSwap())
         {
-            std::list<PLAT_UINT32> dstIDlist = m_pzc->getNotifyTerminals();
-            std::list<PLAT_UINT32>::iterator it;
-            for( it = dstIDlist.begin(); it != dstIDlist.end(); ++it )
-            {
-                //push to db
-                memset(&uintBuf, 0x00, SIZE);
+            //little to big endian for output to db
+            CUtility::littlePackToBE(p);
+        }
 
-                PLAT_UINT32 len = CUtility::getLittlePackSize(p);
-                PLAT_UINT32 did = CUtility::getLittlePackDID(p); //should equal to ffff
-                if (CUtility::needSwap())
-                {
-                    //little to big endian for output to db
-                    CUtility::littlePackToBE(p);
-                }
+        memcpy(&uintBuf, p, len );
 
-                memcpy(&uintBuf, p, len );
+        char tmp[IDSIZE];
+        sprintf(dst,"%08x",*it);
+        m_pRedis->app_rpush(tmp, uintBuf);	
 
-                char tmp[IDSIZE];
-                sprintf(dst,"%08x",*it);
-                m_pRedis->app_rpush(tmp, uintBuf);	
-
-                //transfer it, broadcast message DID can not gotten from little packe 
-                // which DID is ffff
-                if ( m_bUseP1 ) m_pSockClient->transferTerminal(*it, (const char*) p); 
-            }
-       }
+        //transfer it, broadcast message DID can not gotten from little packe 
+        // which DID is ffff
+        if ( m_bUseP1 ) m_pSockClient->transferTerminal(*it, (const char*) p); 
+            
+     }
 }
 
 PLAT_UINT32 CAppInterface::getPlatformID( PLAT_UINT32 srcid)
@@ -756,17 +868,14 @@ PLAT_UINT32 CAppInterface::getPlatformID( PLAT_UINT32 srcid)
 
 PLAT_INT32 CAppInterface::AppRead()
 {
-    int len;
-    int j;
-
     CUtility::initBigPackIdx(recv);
+    plog("Now srcID = %08x start Read\n", m_srcID);
 
     if (m_srcID == 0)
         return 0;
     
 	sprintf(src, "%08x", m_srcID);
     
-
     char srccc[11];
     sprintf(srccc,"%s",src);
     while((m_pRedis->app_run() >0) && (m_pRedis->app_step(srccc) ==0))
@@ -775,8 +884,8 @@ PLAT_INT32 CAppInterface::AppRead()
         PlatformSleep(10);                         
     }
     
-    len = m_pRedis->app_llen(src);
-    for(j =0;j <len;j++)
+    int len = m_pRedis->app_llen(src);
+    for(int j =0;j <len;j++)
     {
         memset(&uintBuf, 0x00, SIZE);
          m_pRedis->app_lpop(m_srcID, uintBuf);
@@ -789,9 +898,7 @@ PLAT_INT32 CAppInterface::AppRead()
 
         CUtility::pushBackPack(recv, uintBuf);
     }
-
-    platID = getPlatformID(m_srcID);         /*得到数据源对应的平台ID						*/        
-    sprintf(plat,"%08x",platID);
+    plog("Now db %s count = %d\n", src, len);
 
     //------------------------------
     //get platform data for read
@@ -817,17 +924,73 @@ PLAT_INT32 CAppInterface::AppRead()
     //get link state from db temporary for 1220 release
     PLAT_UINT8 _linkBuf[64] = "\0";
     int ret = m_pRedis->app_get("link1", _linkBuf);
-    if(ret != 0)
+    if(ret != -1)
+    {
+        plog("Get link1 value in DB is exist.\n"); 
         CUtility::pushBackPack(recv, _linkBuf);
-    plog("App_get link1 return value = %d, 0:have value, -1: no value;\n", 
-ret);
+    }
 
     ret = m_pRedis->app_get("link2", _linkBuf);
-    if(ret != 0)
+    if(ret != -1)
         CUtility::pushBackPack(recv, _linkBuf);
 
+    //Specially process for special terminal
+   // //11-11添加，若是ATP读时，调用计算函数[要根据驾驶模式来区分算法]
+   if((m_srcID & 0xE0000000)==0x60000000)           
+   {
+        plog ("Now is m_srcID & 0xE000000 == 0x60000000, This is atp\n");
+        PLAT_UINT8  RstoATPbuf[SIZE]  = "\0";
+        PLAT_UINT8  tempBuf[SIZE] = "\0";
+        char ctrl[IDSIZE+5] = "\0";
+
+        sprintf(ctrl, "%08x", ((m_srcID&0x1FFFFFFF)|0x80000000));
+        sprintf(ctrl, "%stoatp", ctrl);  
+        //得到RS发送给ATP的包含三块IO板输出数据和速度脉冲包数据信息
+        m_pRedis->app_get (ctrl, RstoATPbuf);
+
+        //得到第一块IO板输出数据，包含unithead头
+        memcpy(tempBuf, RstoATPbuf, 10);                        
+        CUtility::pushBackPack(recv, tempBuf);
+
+        //得到第二块IO板输出数据，包含unithead头
+        memcpy(tempBuf, RstoATPbuf+10, 10);                    
+        CUtility::pushBackPack(recv, tempBuf);
+
+        //得到第三块IO板输出数据，包含unithead头
+        memcpy(tempBuf, RstoATPbuf+20, 10);                    
+        CUtility::pushBackPack(recv, tempBuf);
+
+        //得到RS的速度脉冲包输出数据，包含unithead头，190为包的长度
+        memcpy(tempBuf, RstoATPbuf+30, 202);          
+        CUtility::pushBackPack(recv, tempBuf);                                  
+   }
+    //11-11添加，若是ATO读时，调用计算函数
+   else if((m_srcID&0xE0000000)==0x40000000)                      
+   {
+        plog ("Now is m_srcID & 0xE000000 == 0x40000000, this is ato\n");
+        PLAT_UINT8  RstoATObuf[SIZE] = "\0";
+        char ctrl[IDSIZE+5]  = "\0";
+        PLAT_UINT8  tempBuf[SIZE] = "\0";
+
+        sprintf(ctrl, "%08xtoato", ((m_srcID&0x1FFFFFFF)|0x80000000));
+        //sprintf(ctrl, "%stoato", ctrl);
+        //m_pRedis->app_get (ctrl, RstoATOcharbuf);
+        //app_get(ctrl, RstoATOcharbuf);
+        //app_2_uint(RstoATOcharbuf, RstoATObuf);     
+        //得到RS发送-%0x给ATO的包含速度脉冲包数据信息
+        plog("get %s - %0x\n", ctrl, m_srcID);
+        m_pRedis->app_get (ctrl, RstoATObuf);
+
+        //得到RS的速度脉冲包输出数据，包含unithead头，42为包的长度
+        memcpy(tempBuf, RstoATObuf, 202);                 
+        CUtility::pushBackPack(recv, tempBuf);
+
+        memcpy(tempBuf, RstoATObuf+202, 88);
+        CUtility::pushBackPack(recv, tempBuf);
+   }
+
     //debug
-    plog("Read data: read Addr: %0x\n", recv);
+    plog("Read data Finished: read Addr: %0x\n", recv);
     outputPackage(recv);
 
     if(CUtility::needSwap())

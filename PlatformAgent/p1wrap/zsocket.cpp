@@ -32,12 +32,13 @@ using namespace std;
     //print out little package info
     plog("Now package: unitId = %08x, unitSize = %d, data:\n", 
             CUtility::getLittlePackUID(buffer),size);
-    
-    for(PLAT_UINT32 j = 0;j < size; j++)
+
+    PLAT_UINT32 j = 0;
+    for(j = 0;j < size; j++)
     {
             plog("%02x  ", buffer[j]);
     }
-    plog("\n");
+    plog("print out %d bytes for debug.\n",j);
  }
 
 ZSocket::ZSocket() 
@@ -94,12 +95,25 @@ bool ZSocket::unInit()
 
 int ZSocket::write(int id, const char* data, int byteRead, int flag)
 {
-    return safeSocket_send (id, data, byteRead, flag);
+    int ret = safeSocket_send (id, data, byteRead, flag);
+    plog("Write to socket %d, result len = %d, given len = %d\n", id, ret, byteRead);
+    return ret;
 }
 
 int ZSocket::read(int sockfd, void *buf, size_t len, int pflags)
 {
-    return safeSocket_recv(sockfd, buf, len, pflags);
+    int ret = safeSocket_recv(sockfd, buf, len, pflags);
+    plog("Read from socket %d, result len = %d, given len = %d\n", sockfd, ret, len);
+    plog("Data from network: \n");
+
+    PLAT_UBYTE* _p = (PLAT_UBYTE*) buf;
+    int i = 0;
+    for ( ;i < ret; i++)
+    {
+        plog("%02x  ",_p[i]);//(PLAT_UBYTE*)(buf + i));
+    }
+    plog("\nGet %d bytes from network. \n", i);
+    return ret;
 }
  
 int ZSocket::connectServer(const char *ip,int port,int timeout)
@@ -320,7 +334,7 @@ bool ZSocket::addConnection(long longip,int sockid )
             m_connectionList[i] = sockid;
             m_mapLongIP2SockId.insert(pair<long,int>(longip, sockid) );
               
-            plog("Connection: add tomap: ip2sockid, sockid =%0x, ip=%s,index=%d\n", 
+            plog("Connection: add tomap: ip2sockid, sockid =%d, ip=%s,index=%d\n", 
                 sockid, toString(longip).c_str(),i);
             bret = true;
             break;
@@ -351,8 +365,8 @@ void ZSocket::handleNewConnection()
     {
         /* No room left in the queue! */
         plog("\nNo room left for new client.\n");
-        char data[102] = "Sorry, this server is too busy. Try again later!\r\n";
-        safeSocket_send (connection, data, 1024 , 0);
+        char data[102] = "Sorry, this server is too busy. Try again later!\n";
+        write (connection, data, strlen(data) , 0);
                 
         //close socket
         safeSocket_close (connection);
@@ -483,10 +497,10 @@ int ZSocket::getSockIDFromID(int id)
 
     if ( ret == -1)
     {
-       plog("Failed: Get socketID from ID\n");
+       plog("Failed: Get socketID from ID, Now IP2sockid Map:\n");
        for( it = m_mapLongIP2SockId.begin(); it != m_mapLongIP2SockId.end(); ++it)
        {
-          plog("Now IP2sockid Map %s-%d", toString(it->first).c_str(), it->second);
+          plog("%s-%d  ", toString(it->first).c_str(), it->second);
        }
        plog("\n"); 
     }
@@ -760,7 +774,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
     memcpy(dd, buffer, strlen(msghead));
     //plog("data: %s,", dd);
 
-    plog("Recevied data from other terminal ");
+    plog("Recevied data from self terminal ");
     s_packinfo pack;
     getPackinfo(pack,msgLittleBuf);
 
@@ -786,7 +800,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
             return byteSent;
         }
         // We got some data
-        plog("write to sockid %d, sid=%d\n",sockidTo,pack.sid);     
+        plog("write to sockid %d, sid=%0x, write out %d bytes \n",sockidTo,pack.sid, byteSent);     
       
     }
     else
@@ -877,7 +891,7 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
     {
         CUtility::littlePackToBE(buffer);
     }
-    plog("Little pack info in socket: datatype=%d, sid= 0x%0x, did=0x%0x, size = %d\n",
+    plog("Little pack info in socket: datatype=%0x (16), sid= 0x%0x, did=0x%0x, size = %d\n",
          packinfo.datatype, packinfo.sid,packinfo.did,packinfo.size);
 }
 
@@ -892,7 +906,7 @@ void ZSocket::dealWithData(     int listnum     )
     int sockId = m_connectionList[listnum];
     
     int      flag = 0;
-    int      recvlen = safeSocket_recv(sockId,buffer,SIZE+14,flag);
+    int      recvlen = read(sockId,buffer,SIZE+14,flag);
     if ( recvlen < 0) 
     {
         // Connection closed, close this end and free up entry in connectlist 
@@ -968,7 +982,7 @@ void ZSocket::dealWithData(     int listnum     )
             //the data is from other terminals, push it to db
            if ( (pack.did &0xE0000000) == 0xc0000000)
            {
-               plog("Message to CC from other terminal\n");
+               plog("Message from other to CC terminal\n");
                m_pRedis->app_rpush( (pack.did & 0x1fffffff) | 0x60000000, (const unsigned char*) buffer);//atp
                m_pRedis->app_rpush( (pack.did & 0x1fffffff) | 0x40000000, (const unsigned char*) buffer);//ato
            }

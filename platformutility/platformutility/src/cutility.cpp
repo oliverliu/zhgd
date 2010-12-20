@@ -65,9 +65,17 @@ int CUtility::needSwap()
     {
         bool bmsgBig = false;
 
-#ifdef _MESSAGE_BIG_ENDIAN
-        bmsgBig = true;
-#endif
+        INIReader reader("sid.config");
+        if (reader.ParseError() < 0) {
+            printf( "Can't load 'sid.config'\n");
+            return -1;
+        }
+        int big = reader.GetInteger("self","bigendian",1);
+        bmsgBig = (big == 1 ? true : false);
+
+//#ifdef _MESSAGE_BIG_ENDIAN
+//        bmsgBig = true;
+//#endif
 
         bool blocalBig = isBigEndian();
 
@@ -235,12 +243,12 @@ PLAT_UINT32 CUtility::setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_U
     PLAT_UINT32 size = CUtility::getLittlePackSize(buffer);
     printf("Now package: unitId = %08x, unitSize = %d, data:\n", 
             CUtility::getLittlePackUID(buffer), size);
-    
-    for(PLAT_UINT32 j = 0;j < size; j++)
+    PLAT_UINT32 j = 0;
+    for(  j = 0;j < size; j++)
     {
             printf("%02x  ", buffer[j]);
     }
-    printf("\n");
+    printf("print out %d bytes in utility.\n", j);
  }
 
 //The input buf MUST be little endian and is big package pointer.
