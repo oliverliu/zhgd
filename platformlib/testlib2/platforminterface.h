@@ -1,7 +1,8 @@
 #ifndef _PLATFORM_INTERFACE
 #define _PLATFORM_INTERFACE
 
-#define NETSIZE				2048*4	
+#define SIZE				1024						/*数据包中一个单元的长度*/                         
+#define NETSIZE				SIZE*4						/*数据包的长度          */    
 
 #define  APP_READ_ADDR    PLAT2APP_DATA
 #define  APP_WRITE_ADDR   APP2PLAT_DATA

@@ -16,6 +16,7 @@
 #include "safeSocket.h"
 
 const int MAX_CNT_COUNT=1024;
+#define SIZE 1024
 
 typedef struct _packinfo
 {
@@ -34,15 +35,18 @@ public:
 
     //client
     //return sockect id, connect ip
-    int getWriteSocket(const char *ip,int port = 1086, int timeout = -1);//until connect successful return, for client
+    //int getWriteSocket(const char *ip,int port = 1086, int timeout = -1);
+    //Block; until connect successful return, for client
     virtual int connectServer(const char *ip,int port = 1086, int timeout = -1);
+    //Unblock
+    virtual int connectTerminal(unsigned int did,int port = 1086, int timeout = -1);
    
+    virtual int disconnectServer(char* ip);
+    virtual int disconnectTerminal(int did);
+
     int sendConnect(int sockid, const char* data, int size, int flag);
     int sendDisConnect(int sockid, const char* data, int size, int flag);
     int sendTransfer(int sockid, const char* data, int size, int flag);
-
-    int disconnectServer(char* ip);
-    int disconnectServer(int did);
 	
     //server 
     //Successful: 1; failed: 0
@@ -57,8 +61,8 @@ public:
     int write(int id, const char* data, int byteRead, int flag);
     int read(int sockfd, void *buf, size_t len, int pflags);
 
-    bool canWrite(int sockId,int seconds = -1);
-    bool canRead(int sockId, int seconds = -1);
+    bool canWrite(int sockId,int microseconds = -1);
+    bool canRead(int sockId, int microseconds = -1);
     //debug
     void setLog(const char* file = NULL);
  
@@ -66,22 +70,32 @@ protected:
     void plog(const char* format, ...);
     void outputLittlepack(const unsigned char * buffer);
 
+    //init connect state unit package
+    //type: 0: create connect
+    //        1: remove connect
+    //connectvalue: 1: successful
+    //          other: failed
+    void initPackage(unsigned  char *  _ppack, unsigned int did, int type, int connectvalue);
+    void updateDbBuffer(unsigned  char *  ppack);
+
 private:
     int  connect(int sockid, int _port, const char *ip,int timeout = -1);
 
-	bool init();
-	bool unInit();
+    bool init();
+    bool unInit();
 
  //   void buildSelectList();
     void preSockSet();
-	void readSocks();
-	void handleNewConnection();
+    void readSocks();
+    void handleNewConnection();
     void dealWithData(int listnum);
+    void updateConnectResult(int listnum,int result);
 	
-
-    
     std::string getIPFromID(int id);
+    unsigned int getIDFromIP(std::string ip);
     std::string getIPFromSockID(int sockid);
+	
+    unsigned int getIDFromSockID(int sockid);
     int  getSockIDFromID(int id);
      
     void initIDIP();
@@ -89,7 +103,7 @@ private:
     void getPackinfo(struct _packinfo& packinfo, char* buffer);
 
      bool addConnection (long longip,int sockid);
-     bool delConnection(long long_address);
+     bool delConnection(long long_address);	 
 
     bool isTransferCtrl(const char * buffer);
     bool isConnectCtrl(const char * buffer);
@@ -100,13 +114,18 @@ private:
 
     void initConnectState(const char *  _ppack, const unsigned int  did, const unsigned int  sid,
                 int type, int connectvalue);
+    bool needMonitor(int sockid);
 private:
 
     bool m_bInit;
-	int m_idListen;//for server that is listen id, for client it is R/W socket id
-	TSafeSocket_FdSet  m_readSet;
+    int m_idListen;//for server that is listen id, for client it is R/W socket id
+    TSafeSocket_FdSet  m_readSet;
     TSafeSocket_FdSet  m_excepSet;
+	
     int m_connectionList[MAX_CNT_COUNT];//save acceptted fd
+   // int m_sockReadMonitorList[MAX_CNT_COUNT];
+   // int m_sockExceptMonitorList[MAX_CNT_COUNT];
+	
     std::string m_strfileLog;
 
     std::map<long, int> m_mapLongIP2SockId;
@@ -115,6 +134,8 @@ private:
     std::map<int,std::string> m_mapID2IP;
     ZRedis* m_pRedis;
 
+    //save data in db, the data is little endian, that used for app_get/app_set
+    unsigned char m_dbBuf[SIZE];
 };
 
 class ZSocketClient : public ZSocket
@@ -124,7 +145,7 @@ public:
     ~ZSocketClient();
 
     int connectServer(const char *ip,int port = 1086, int timeout = -1);
-    bool init();
+    //bool init();
 
     int transferTerminal(const char* littlepack,int lenpack);//the did can be gotten from littlepack
     int transferTerminal(const unsigned int did, const char* littlepack);
@@ -140,8 +161,8 @@ private:
     int connectTerminalInterl(int did, bool bconnect);
 
 private:
-    ZSocket *m_sockClient;
-    int      m_sockId;
+    //ZSocket *m_sockClient;
+    int      m_sockId;//socket between self and agent 
 };
 
 #endif

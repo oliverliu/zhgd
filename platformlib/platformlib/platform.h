@@ -49,17 +49,16 @@ protected:
 
 	PLAT_UINT32     getPlatformID( PLAT_UINT32 srcid);
 
-	void                write2PlatBuffer(PLAT_UBYTE*  ppack);
-       void                write2DbBuffer(PLAT_UBYTE*  ppack);
-	void                updatePlatBuffer(PLAT_UBYTE*  ppack);
-       void                updateDbBuffer(PLAT_UBYTE*  ppack);
+	//void                write2PlatBuffer(PLAT_UBYTE*  ppack);
+       //void                write2DbBuffer(PLAT_UBYTE*  ppack);
+	//void                updatePlatBuffer(PLAT_UBYTE*  ppack);
+       //void                updateDbBuffer(PLAT_UBYTE*  ppack);
 
 	//void                initPackage(PLAT_UBYTE*  ppack, PLAT_UINT len, int type, int value);//len is T_UNIT_HEADE.size
-	void                initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, int connectvalue);
-	
-       void                unInitPackage(PLAT_UBYTE* ppack);
+	//void                initPackage(PLAT_UBYTE*  _ppack, PLAT_UINT did, int type, int connectvalue);
+      // void                unInitPackage(PLAT_UBYTE* ppack);
 
-	void			newPackage(int type);
+	//void			newPackage(int type);
 	void			write2PlatBuffer();
 	PLAT_INT32	    AppWrite(char *);                          
 	PLAT_INT32	    AppRead(char *);

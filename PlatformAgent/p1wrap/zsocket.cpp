@@ -69,6 +69,8 @@ ZSocket::~ZSocket()
 
 bool ZSocket::init()
 {
+    CUtility::initBigPackIdx(m_dbBuf);
+
     TSafeStruct_CfgData pa ;
     memset(&pa, 0, sizeof(TSafeStruct_CfgData));
  
@@ -116,7 +118,7 @@ int ZSocket::read(int sockfd, void *buf, size_t len, int pflags)
     return ret;
 }
  
-int ZSocket::connectServer(const char *ip,int port,int timeout)
+int ZSocket::connectServer(const char *ip,int port,int seconds)
 {
     int sockid = create();
     if( sockid < 0)
@@ -124,7 +126,181 @@ int ZSocket::connectServer(const char *ip,int port,int timeout)
         plog("Failed: create sockid, now is =%d\n", sockid);
         return -1;
     }
-    return connect(sockid, port, ip,timeout);   
+    int ret = connect(sockid, port, ip,seconds);   
+
+    TSafeSocket_FdSet  exceptSet;
+    SS_FD_ZERO (&exceptSet);
+    SS_FD_SET (sockid, &exceptSet);
+
+    struct timeval timeout;
+    timeout.tv_sec = seconds;//3s
+    timeout.tv_usec = 0;
+    
+    int  errNumber ;
+    if ( seconds > 0)
+    {
+        plog ("Wait connect result %d seconds\n", seconds);
+        errNumber = safeSocket_select(0, NULL,NULL, &exceptSet,&timeout);
+    }
+    else
+        errNumber = safeSocket_select (0, NULL,NULL, &exceptSet, NULL);
+
+    if (errNumber == 0)
+    {
+        plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
+        return -1;
+    }
+
+    ret = -1;
+    if (SS_FD_ISSET(sockid, &exceptSet))
+            ret = sockid;
+        
+    return ret;
+
+}
+
+int ZSocket::connectTerminal(unsigned int did,int port,int timeout)
+{
+    string ip = getIPFromID(did);
+    if (ip.empty())
+    {
+        plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procConnectCtrl \n",
+            did);
+        return -1;
+    }
+
+    int sockid = create();
+    if( sockid < 0)
+    {
+        plog("Failed: create sockid, now is =%d\n", sockid);
+        return -1;
+    }
+    int ret = connect(sockid, port, ip.c_str(),timeout);   
+
+    if( ret != -1)
+    {
+        plog("Info: connect server %s try!\n", ip.c_str());
+        long long_address = inet_addr ( ip.c_str());
+        bool badd = addConnection(long_address, sockid);
+        if ( !badd )
+        {
+            plog("Warning: try connect , but add monitor failed!!!! That is unnormal!\n");
+        }
+    }
+    else
+    {
+        plog("Warning: connect server %s failed!\n", ip.c_str());
+        return -1;
+    }
+
+    PLAT_UBYTE pack[1024] = "\0" ;
+    initPackage(pack,did, 0,0);
+    CUtility::pushBackPack(m_dbBuf, pack);
+    
+    m_pRedis->app_set("linkstate", m_dbBuf);
+
+    return ret;
+}
+
+
+//init connect state unit package
+//type: 0: create connect
+//      1: remove connect
+//connectvalue: 1: successful
+//          other: failed
+void ZSocket::initPackage(unsigned char *  _ppack, PLAT_UINT did,
+                                           int type, int connectvalue)
+{
+    typedef struct connectStateData
+    {
+        PLAT_UBYTE result;
+        PLAT_UBYTE resver1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT  resver2[2];
+    }tConStateData;
+
+    T_UNIT* ppack = (T_UNIT*) _ppack;
+    tConStateData _connectStateData;
+    memset(&_connectStateData, 0, sizeof(tConStateData));
+
+    ppack->unitSize = sizeof(tConStateData);
+    ppack->unitData = ( PLAT_BYTE* )(_ppack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD));
+
+   static PLAT_UINT srcID = 0;
+   if ( srcID == 0)
+   {
+      //get from agent srcID
+       INIReader reader("sid.config");
+         
+        if (reader.ParseError() < 0) {
+           printf( "Can't load 'private.config'\n");
+           return ;
+        }
+        srcID = reader.GetInteger("self","SID",0);
+   }
+   
+    char cv = 0xaa;
+    if (connectvalue == 1) //connect successful
+        cv = 0x55;
+
+    _connectStateData.result = cv;
+    _connectStateData.sid = srcID;
+    _connectStateData.did = did;
+
+    memcpy(ppack->unitData, (const char*)&_connectStateData, sizeof(tConStateData));
+
+    switch (type)
+    {
+    case 0: //create connect
+        {
+            ppack->unitId = 0;
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x23
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
+            ppack->unitId = ppack->unitId;
+        }
+    break;
+    case 1: //remove connect
+    {
+        ppack->unitId = 0;
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x20
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
+
+        ppack->unitId = ppack->unitId;
+    }
+    break;
+    default:
+    break;
+    }
+}
+
+
+void ZSocket::updateDbBuffer(unsigned char *  ppack)
+{
+    PLAT_UINT32 sid = CUtility::getLinkStateSID(ppack);
+    
+    PLAT_UINT64 id = PLATUNITID(sid,
+            CUtility::getLinkStateDID(ppack));
+
+    PLAT_UINT32 count = CUtility::getUnitCounts(m_dbBuf);
+    for (int i = 0; i < count; i++)
+    {
+        PLAT_UBYTE * unit = CUtility::getUnitHead(m_dbBuf, i);
+
+        //get link control did
+        PLAT_UINT64 idsrc = PLATUNITID(CUtility::getLinkStateSID(unit),
+            CUtility::getLinkStateDID(unit));
+        if (idsrc == id)
+        {
+            //update the unit data
+            CUtility::updateLittlePack((PLAT_UBYTE*)ppack, unit);
+        }
+    }
+
 }
 
 int ZSocket::disconnectServer(char* ip)
@@ -132,20 +308,51 @@ int ZSocket::disconnectServer(char* ip)
     return -1;
 }
 
-int ZSocket::disconnectServer(int did)
+int ZSocket::disconnectTerminal(int did)
 {
+    int bret = 0;
     int sockid = getSockIDFromID(did);
+    string value = getIPFromID(did);
+
+    plog("Try disconnect with %s connection.\n", value.c_str());
     if (sockid < 0)
-        return -1;
+        bret = -1;
     else
-        return safeSocket_close(sockid);
+        bret = safeSocket_close(sockid);
+
+    if( bret != -1)
+    {
+        if (value.empty())
+        {
+            plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procDisconnectCtrl\n",
+                   did);
+            return -1;
+        }
+        long long_address = inet_addr (value.c_str()) ;
+        bool bdel = delConnection(long_address);
+        if ( !bdel )
+        {
+            plog("Warning: disconnect successful, but del monitor failed!!!! That is unnormal!\n");
+        }
+    }
+    else
+    {
+        plog("%0x has not connect agent, it need not disconnect\n", did);
+    }
+
+    PLAT_UBYTE pack[1024] = "\0" ;
+    initPackage(pack,did, 1,1);
+    updateDbBuffer(pack);
+    
+    plog("Update data info in DB for conect with %s.\n", value.c_str());
+    m_pRedis->app_set("linkstate", m_dbBuf);
 }
 
-int ZSocket::getWriteSocket(const char *ip,int port,int timeout)
-{
-    int sockid = create();
-    return connect(sockid, port, ip,timeout);   
-}
+//int ZSocket::getWriteSocket(const char *ip,int port,int timeout)
+//{
+//    int sockid = create();
+//    return connect(sockid, port, ip,timeout);   
+//}
 
 int ZSocket::create()
 {
@@ -213,6 +420,7 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
         plog("ip address is empty\n");
         return -1;
     }
+    
         /* bind safeSockID to listen connection request from client */
     struct sockaddr_in localAddr;
     memset(&localAddr, 0, sizeof(struct sockaddr_in));
@@ -227,48 +435,49 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
     {
        int errNumber = safeSocket_getErrorNum (sockid);
        plog ("connect failed, errNumber = %u\n", errNumber);
-	   
+       
         #ifdef Q_WS_WIN
         closesocket (sockid);
         #else
         close(sockid);
         #endif
-	   
+        
        return -1;
     }
 
-    //return sockid;
-    //for now do not test fd_set
+    return sockid;
+    
+    //for now do not test fd_set, that move to procLoop select
 
  /* add safeSock to except set */
-    TSafeSocket_FdSet  exceptSet;
-    SS_FD_ZERO (&exceptSet);
-    SS_FD_SET (sockid, &exceptSet);
-
-    struct timeval timeout;
-    timeout.tv_sec = seconds;//3s
-    timeout.tv_usec = 0;
-    
-    int  errNumber ;
-    if ( seconds > 0)
-    {
-        plog ("Wait connect result %d seconds\n", seconds);
-        errNumber = safeSocket_select(0, NULL,NULL, &exceptSet,&timeout);
-    }
-    else
-        errNumber = safeSocket_select (0, NULL,NULL, &exceptSet, NULL);
-
-    if (errNumber == 0)
-    {
-        plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
-        return -1;
-    }
-
-    int ret = -1;
-    if (SS_FD_ISSET(sockid, &exceptSet))
-            ret = sockid;
-        
-    return ret;
+ //   TSafeSocket_FdSet  exceptSet;
+ //   SS_FD_ZERO (&exceptSet);
+//    SS_FD_SET (sockid, &exceptSet);
+//
+//    struct timeval timeout;
+//    timeout.tv_sec = seconds;//3s
+//    timeout.tv_usec = 0;
+//    
+//    int  errNumber ;
+//    if ( seconds > 0)
+//    {
+//        plog ("Wait connect result %d seconds\n", seconds);
+//        errNumber = safeSocket_select(0, NULL,NULL, &exceptSet,&timeout);
+//    }
+//    else
+//        errNumber = safeSocket_select (0, NULL,NULL, &exceptSet, NULL);
+//
+//    if (errNumber == 0)
+//    {
+//        plog ("Error: select connection hasn't been established! ip = %s,port=%d\n",ip,port);
+//        return -1;
+//    }
+//
+//    int ret = -1;
+//    if (SS_FD_ISSET(sockid, &exceptSet))
+//            ret = sockid;
+//        
+//    return ret;
 }
 
  void ZSocket::preSockSet()
@@ -282,6 +491,7 @@ int ZSocket::connect(int sockid, int port, const char *ip, int seconds)
             if (m_connectionList[listnum] != 0) 
             {
                     SS_FD_SET(m_connectionList[listnum],&m_readSet);
+                    SS_FD_SET (m_connectionList[listnum], &m_excepSet);
             }
     }
  }
@@ -394,7 +604,7 @@ int ZSocket::connectDb()
 
 
 
-bool ZSocket::canWrite(int sockId,int seconds )
+bool ZSocket::canWrite(int sockId,int microseconds )
 {
     ASSERT_SOCKID(sockId);
     bool bret = false;
@@ -403,11 +613,11 @@ bool ZSocket::canWrite(int sockId,int seconds )
     SS_FD_SET (sockId, &set);
 
     struct timeval timeout;
-    timeout.tv_sec = seconds;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = microseconds;
     
     int  socks ;
-    if ( seconds > 0)
+    if ( microseconds > 0)
         socks = safeSocket_select (0, NULL, &set, NULL,  &timeout);
     else
         socks = safeSocket_select (0, NULL, &set, NULL,  NULL);
@@ -416,7 +626,7 @@ bool ZSocket::canWrite(int sockId,int seconds )
     return bret;
 }
 
-bool ZSocket::canRead(int sockId,int seconds )
+bool ZSocket::canRead(int sockId,int microseconds )
 {
     ASSERT_SOCKID(sockId);
     bool bret = false;
@@ -425,11 +635,11 @@ bool ZSocket::canRead(int sockId,int seconds )
     SS_FD_SET (sockId, &set);
     
     struct timeval timeout;
-    timeout.tv_sec = seconds;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = microseconds;
    
     int  socks ;
-    if ( seconds > 0)
+    if ( microseconds > 0)
         socks = safeSocket_select (0, &set, NULL, NULL,  &timeout);
     else
         socks = safeSocket_select (0, &set, NULL, NULL,  NULL);
@@ -439,6 +649,20 @@ bool ZSocket::canRead(int sockId,int seconds )
     return bret;
 }
 
+PLAT_UINT ZSocket::getIDFromIP(std::string ip)
+{
+    //ip->DID
+    ZINIReader reader("sid.config");
+
+    if (reader.ParseError() < 0) {
+        plog( "Can't load 'sid.config'\n");
+        return 0;
+    }
+    PLAT_UINT value = reader.GetIDFromIp( "ip",ip, 0);
+    //plog("Get IP from ID in configure file, id = %s, ip = %s\n", key, value.c_str());
+
+    return value;
+}
 
 string ZSocket::getIPFromID(int id)
 {
@@ -461,6 +685,12 @@ string ZSocket::getIPFromID(int id)
     //plog("Get IP from ID in configure file, id = %s, ip = %s\n", key, value.c_str());
 
     return value; 
+}
+
+PLAT_UINT ZSocket::getIDFromSockID(int sockId)
+{
+    std::string ip = getIPFromSockID(sockId);
+    return getIDFromIP(ip);    
 }
 
 std::string ZSocket::getIPFromSockID(int sockid)
@@ -699,32 +929,8 @@ int ZSocket::procConnectCtrl(const char * buffer)
     char msghead[] = "selfconnect";
     unsigned int did = 0; 
     sscanf(buffer + strlen(msghead),"%d", &did);
-  
-    string ip = getIPFromID(did);
-    if (ip.empty())
-    {
-        plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procConnectCtrl \n",
-            did);
-        return -1;
-    }
-
-    sockid = connectServer(ip.c_str(),1086,163);
-
-    if( sockid != -1)
-    {
-        plog("Info: connect server %s successful!\n", ip.c_str());
-        string ip = getIPFromID(did);
-        long long_address = inet_addr ( ip.c_str()) ;
-        badd = addConnection(long_address, sockid);
-        if ( !badd )
-        {
-            plog("Warning: connect successful, but add monitor failed!!!! That is unnormal!\n");
-        }
-    }
-    else
-    {
-        plog("Warning: connect server %s failed!\n", ip.c_str());
-    }
+    
+    sockid = connectTerminal(did,1086,163);  
     return sockid;
 }
 
@@ -735,27 +941,8 @@ int ZSocket::procDisconnectCtrl(const char * buffer)
     unsigned int did = 0;
     sscanf(buffer + strlen(msghead),"%d", &did);
 
-    bret = disconnectServer(did);
-    if( bret != -1)
-    {
-        string value = getIPFromID(did);
-        if (value.empty())
-        {
-            plog("Failed: Find ip from configure file for id=0x%0x.in ZSocket::procDisconnectCtrl\n",
-                   did);
-            return -1;
-        }
-        long long_address = inet_addr (value.c_str()) ;
-        bdel = delConnection(long_address);
-        if ( !bdel )
-        {
-            plog("Warning: disconnect successful, but del monitor failed!!!! That is unnormal!\n");
-        }
-    }
-    else
-    {
-        plog("%0x has not connect agent, it need not disconnect\n", did);
-    }
+    bret = disconnectTerminal(did);
+  
     return bret;
 }
 
@@ -813,7 +1000,8 @@ int ZSocket::procTransferCtrl(const char * buffer)
            
 
 //init connect state unit package
-void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,const unsigned int sid, int type, int connectvalue)
+void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,
+   const unsigned int sid, int type, int connectvalue)
 {
     typedef struct connectStateData
     {
@@ -893,6 +1081,20 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
     }
     plog("Little pack info in socket: datatype=%0x (16), sid= 0x%0x, did=0x%0x, size = %d\n",
          packinfo.datatype, packinfo.sid,packinfo.did,packinfo.size);
+}
+
+void ZSocket::updateConnectResult(int listnum, int result)
+{
+    PLAT_UBYTE pack[1024] = "\0";
+
+    int sockId = m_connectionList[listnum];
+
+    PLAT_UINT dstID = getIDFromSockID(sockId);
+
+    initPackage(pack,dstID, 0,result);//default 1, successful
+    updateDbBuffer(pack);
+    
+    m_pRedis->app_set("linkstate", m_dbBuf);
 }
 
 // listnum: Current item in connectlist for for loops
@@ -992,6 +1194,14 @@ void ZSocket::dealWithData(     int listnum     )
   }//safeSocket_recv else end
 }
 
+bool ZSocket::needMonitor(int sockid)
+{
+   string ip = getIPFromID(sockid);
+   long long_address = inet_addr ( ip.c_str());
+
+   return m_mapLongIP2SockId.count(long_address) ? true : false;
+}
+
 void ZSocket::readSocks()
 {
     if (SS_FD_ISSET(m_idListen,&m_excepSet))
@@ -1005,10 +1215,28 @@ void ZSocket::readSocks()
         for (int i = 0; i < MAX_CNT_COUNT; i++) 
         {
             if (m_connectionList[i] >0 &&
+                SS_FD_ISSET(m_connectionList[i],&m_excepSet))
+            {
+                //if ( canWrite(m_connectionList[i]))
+                //if create connect occure
+                if ( needMonitor(m_connectionList[i]) )
+                {
+                    plog("\nProcesss socket %d, ip =%s do sockect connect successful\n", 
+                    m_connectionList[i],getIPFromSockID(m_connectionList[i]).c_str());
+                    updateConnectResult(i, 1);
+                }
+                //if delete connection occure
+                //do nothing
+            }
+        } 
+   
+        for (int i = 0; i < MAX_CNT_COUNT; i++) 
+        {
+            if (m_connectionList[i] >0 &&
                 SS_FD_ISSET(m_connectionList[i],&m_readSet))
             {
                 plog("\nProcesss socket %d, ip =%s do dealWithData\n", 
-                    m_connectionList[i],getIPFromSockID(m_connectionList[i]).c_str());//New connection create with me\n");
+                    m_connectionList[i],getIPFromSockID(m_connectionList[i]).c_str());
                 dealWithData(i);
             }
         } 
@@ -1020,11 +1248,13 @@ void ZSocket::procLoop(int timeoutSeconds)
     struct timeval timeout;
     if( timeoutSeconds >= 0)
     {
-        timeout.tv_sec = timeoutSeconds;//10;
-        timeout.tv_usec = 0;
+         //using default value, ignore parameter
+         timeout.tv_sec = 0;
+         timeout.tv_usec = 15000;//15ms
     }
+    
 
-    plog("Timeout interval in procLoop %d seconds\n", timeoutSeconds);
+    plog("Timeout interval in procLoop %d mircroseconds\n", timeout.tv_usec/1000);
     while (1) 
     {
         preSockSet();
@@ -1046,7 +1276,13 @@ void ZSocket::procLoop(int timeoutSeconds)
         else
         {
             if (readsocks < 0) plog("select error: data failed to be received!\n");
-            else if (readsocks == 0) { plog(".");     fflush(stdout);}
+            else if (readsocks == 0)
+            { 
+                static int i = 0; 
+                static int c = 10000000/timeout.tv_usec;
+                if (i > c ){ plog(".");     fflush(stdout); i = -1;}
+                i++;
+             }
         }
 
     }//endof while
@@ -1083,7 +1319,6 @@ void ZSocket::setLog(const char* file)
     }
 }
 
-
 ZSocketClient::ZSocketClient()
 {
 }
@@ -1092,25 +1327,25 @@ ZSocketClient::~ZSocketClient()
 {
 }
 
-bool ZSocketClient::init()
-{
-    bool bret = false;
-    if (connectDb())
-    {
-        m_sockId = ZSocket::connectServer("127.0.0.1");
-        if ( m_sockId <= 0)
-        {
-            bret = false;
-            plog("Failed: connect server\n");
-        }
-        else
-        {
-            bret = true;
-            plog("m_sockId=%d\n", m_sockId );
-        }
-    }
-    return bret;
-}
+//bool ZSocketClient::init()
+//{
+//    bool bret = false;
+//    if (connectDb())
+//    {
+//        m_sockId = ZSocket::connectServer("127.0.0.1");
+//        if ( m_sockId <= 0)
+//        {
+//            bret = false;
+//            plog("Failed: connect server\n");
+//        }
+//        else
+//        {
+//            bret = true;
+//            plog("m_sockId=%d\n", m_sockId );
+//        }
+//    }
+//    return bret;
+//}
 
 int ZSocketClient::connectServer(const char *ip,int port, int timeout)
 {

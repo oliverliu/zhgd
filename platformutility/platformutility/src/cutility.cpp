@@ -367,7 +367,7 @@ bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
 }
 
 
-PLAT_UINT32 CUtility::getLinkStateDID(PLAT_UBYTE*  plinkstatePack)
+PLAT_UINT32 CUtility::getLinkStateDID(const PLAT_UBYTE*  plinkstatePack)
 {
     typedef struct connectStateData
     {
@@ -384,7 +384,7 @@ PLAT_UINT32 CUtility::getLinkStateDID(PLAT_UBYTE*  plinkstatePack)
 
 }
 
-PLAT_UINT32 CUtility::getLinkStateSID(PLAT_UBYTE*  plinkstatePack)
+PLAT_UINT32 CUtility::getLinkStateSID(const PLAT_UBYTE*  plinkstatePack)
 {
     typedef struct connectStateData
     {

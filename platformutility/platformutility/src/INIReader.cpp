@@ -54,3 +54,34 @@ int INIReader::ValueHandler(void* user, const char* section, const char* name,
     reader->_values[MakeKey(section, name)] = value;
     return 1;
 }
+
+
+//ZINIReader
+ ZINIReader::ZINIReader(std::string filename) : INIReader(filename)
+ {
+ }
+
+long ZINIReader::GetIDFromIp(std::string section, std::string value, long default_key)
+{
+    long ret = default_key;
+     std::map<std::string, std::string>::iterator it ;
+     for(it = _values.begin(); it != _values.end(); it++)
+     {
+        if (value == it->second )
+        {
+            std::string key = it->first;
+            if (key.substr(0, section.length()) == section )
+            {
+                int pos = key.find("0x");    // position of "0x" in str
+                const char* value =  key.substr (pos).c_str();
+                char* end;
+                // This parses "1234" (decimal) and also "0x4D2" (hex)
+                long n = strtol(value, &end, 0);
+                ret =  end > value ? n : default_key;
+                break;
+            }
+        }
+    }
+    return ret;   
+}
+

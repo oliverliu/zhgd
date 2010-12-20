@@ -16,6 +16,8 @@
 #include "tpackage.h"
 #pragma pack(1)                                                                                                                                         /*设定为1字节对齐*/
 
+#define PLATUNITID(sid, did)  (sid & did << sizeof(PLAT_UINT32))
+
 //#define _CRT_SECURE_NO_WARNINGS 
 // The output / input data for platform are big endian sequence
 // When enter our loop, transfer them to little endian and leave transfer them to big endian
@@ -57,8 +59,8 @@ public:
 	static PLAT_UINT32 getLittlePackSize(const PLAT_UBYTE* littlepack);//including head
 	static bool updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littlepackDst);
 
-    static PLAT_UINT32 getLinkStateDID(PLAT_UBYTE*  plinkstatePack);
-    static PLAT_UINT32 getLinkStateSID(PLAT_UBYTE*  plinkstatePack);
+    static PLAT_UINT32 getLinkStateDID(const PLAT_UBYTE*  plinkstatePack);
+    static PLAT_UINT32 getLinkStateSID(const PLAT_UBYTE*  plinkstatePack);
 	//Big package
 	static PLAT_UINT32 getUnitCounts(const PLAT_UBYTE* bigPackHead);
 	static PLAT_UBYTE* getUnitHead(const PLAT_UBYTE* bigPackHead, PLAT_UINT32 indx); //start from 0;

@@ -32,13 +32,21 @@ public:
     // Get an integer (long) value from INI file, returning default_value if
     // not found.
     long GetInteger(std::string section, std::string name, long default_value);
-
+	
+protected:
+	  std::map<std::string, std::string> _values;
 private:
-    int _error;
-    std::map<std::string, std::string> _values;
+    int _error;  
     static std::string MakeKey(std::string section, std::string name);
     static int ValueHandler(void* user, const char* section, const char* name,
                             const char* value);
+};
+
+class ZINIReader : public INIReader
+{
+public:
+    ZINIReader(std::string filename);
+	long GetIDFromIp(std::string section, std::string value, long default_key);
 };
 
 #endif  // __INIREADER_H__
