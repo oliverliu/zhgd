@@ -16,7 +16,7 @@
 #include "safeSocket.h"
 
 const int MAX_CNT_COUNT=1024;
-#define SIZE 1024
+#define SIZE 2048
 
 typedef struct _packinfo
 {
@@ -78,6 +78,7 @@ protected:
     void initPackage(unsigned  char *  _ppack, unsigned int did, int type, int connectvalue);
     void updateDbBuffer(unsigned  char *  ppack);
 
+    void procSelfData();
 private:
     int  connect(int sockid, int _port, const char *ip,int timeout = -1);
 

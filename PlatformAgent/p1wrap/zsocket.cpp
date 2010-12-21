@@ -1243,6 +1243,10 @@ void ZSocket::readSocks()
     }
 }
 
+void ZSocket::procSelfData()
+{
+}
+
 void ZSocket::procLoop(int timeoutSeconds)
 {
     struct timeval timeout;
@@ -1278,6 +1282,7 @@ void ZSocket::procLoop(int timeoutSeconds)
             if (readsocks < 0) plog("select error: data failed to be received!\n");
             else if (readsocks == 0)
             { 
+                procSelfData();
                 static int i = 0; 
                 static int c = 10000000/timeout.tv_usec;
                 if (i > c ){ plog(".");     fflush(stdout); i = -1;}

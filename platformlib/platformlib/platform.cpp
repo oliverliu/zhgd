@@ -353,13 +353,23 @@ PLAT_INT32 CAppInterface::AppWrite()
 
                 plog("Want to transfer data ");
                 outputLittlepack((const unsigned char*)uintBuf);
+                PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
+
                 if (CUtility::needSwap())
                 {
                     //little to big endian for output to db
                     CUtility::littlePackToBE(uintBuf);
                 }
+                
+                if (did >= 10000 && did < 100000) 
+                {
+                    plog("This message send to CBI, just push it\n");
+                }
+                else
+                {
+                   if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                }
                 m_pRedis->app_rpush(dstID, uintBuf);   
-                if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);
                 continue;
             }
             break;
