@@ -31,7 +31,7 @@ public:
 
     // Get an integer (long) value from INI file, returning default_value if
     // not found.
-    long GetInteger(std::string section, std::string name, long default_value);
+    unsigned long int  GetInteger(std::string section, std::string name, long default_value);
 	
 protected:
 	  std::map<std::string, std::string> _values;

@@ -24,9 +24,6 @@
     <ClInclude Include="safeSocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="safeStruct.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="zsocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>

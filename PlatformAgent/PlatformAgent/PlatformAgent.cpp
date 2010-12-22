@@ -16,6 +16,8 @@ void invokeProc()
 
 int main (int argc, char **argv)
 {
+    int i =0 ;
+    printf("afasdfas\n");
     invokeProc();
 
     ZSocket server;

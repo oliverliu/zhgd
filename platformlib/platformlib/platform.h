@@ -72,7 +72,7 @@ protected:
 
 protected:															
 	ZRedis*                 m_pRedis;
-	ZSocketClient*          m_pSockClient;
+	//ZSocketClient*          m_pSockClient;
 	PLAT_UINT8 *            send;	/*平台接收的数据包的首地址*/															
 	PLAT_UINT8 *            recv;	/*平台接收的数据包的首地址*/
 

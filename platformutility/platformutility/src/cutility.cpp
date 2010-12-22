@@ -45,6 +45,17 @@
 #include <arpa/inet.h>
 #endif
 
+typedef struct connectStateData
+{
+        PLAT_UBYTE ctrlReq; //case 0x10: connect add; 0x11: connect remove
+        PLAT_UBYTE resv1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT msgype;
+        PLAT_UINT msglen;
+}tConStateData;
+
+
 static bool isBigEndian()
 {
    short word = 0x4321;
@@ -369,35 +380,31 @@ bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
 
 PLAT_UINT32 CUtility::getLinkStateDID(const PLAT_UBYTE*  plinkstatePack)
 {
-    typedef struct connectStateData
-    {
-        PLAT_UBYTE result;
-        PLAT_UBYTE resver1[3];
-        PLAT_UINT sid;
-        PLAT_UINT did;
-        PLAT_UINT  resver2[2];
-    }tConStateData;
-
     tConStateData st;
-    memcpy(&st, plinkstatePack, sizeof(tConStateData));
+    memcpy(&st, plinkstatePack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD), 
+                     sizeof(tConStateData));
     return st.did;
-
 }
 
 PLAT_UINT32 CUtility::getLinkStateSID(const PLAT_UBYTE*  plinkstatePack)
 {
-    typedef struct connectStateData
-    {
-        PLAT_UBYTE result;
-        PLAT_UBYTE resver1[3];
-        PLAT_UINT sid;
-        PLAT_UINT did;
-        PLAT_UINT  resver2[2];
-    }tConStateData;
-
     tConStateData st;
-    memcpy(&st, plinkstatePack, sizeof(tConStateData));
+    memcpy(&st, plinkstatePack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD),
+                     sizeof(tConStateData));
     return st.sid;
+}
+
+PLAT_UINT8   CUtility::getLinkStateType(const PLAT_UBYTE* plinkstatePack)
+{
+       tConStateData st;
+       memcpy(&st, plinkstatePack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD),
+                     sizeof(tConStateData));
+       return st.ctrlReq;
+}
+
+bool CUtility::isConnectCmdLinkState(const PLAT_UBYTE* plinkstatePack)
+{
+    return getLinkStateType(plinkstatePack) == 0x10 ? true : false;
 }
 
 PLAT_UINT32 CUtility::getLittlePackUID(const PLAT_UBYTE * littlepack)
@@ -512,6 +519,21 @@ bool CUtility::updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littl
 void CUtility::updateBigPackIdx(PLAT_UBYTE* bigPackHead, const T_DATA_INDEX & idxData)
 {
     memcpy(bigPackHead,&idxData, sizeof(T_DATA_INDEX));
+}
+
+bool CUtility::isCCID(const PLAT_UINT32 id)
+{
+   return   (id &0xF0000000) == 0xf0000000 ? true : false;
+}
+
+PLAT_UINT32 CUtility::getAtpIDFromCC(const PLAT_UINT32 ccid)
+{
+  return  (ccid & 0x0fffffff) | 0x60000000;
+}
+
+PLAT_UINT32 CUtility::getAtoIDFromCC(const PLAT_UINT32 ccid)
+{
+    return  (ccid & 0x0fffffff) | 0x40000000;
 }
 
 void CUtility::initBigPackIdx(PLAT_UBYTE* p)

@@ -36,6 +36,13 @@
 [Lessons Learn]
      1. For forein lib and .h files internal, need release note before work.
 
+[To do]
+1. p1协议 window版本和linux版本头文件不统一，何时可以统一？
+2. 硬件部 如果没有P1协议或者P2P协议，他们是怎么进行调试呢？
+   如果可以调试，连接控制的结果会怎么返回给终端呢？
+3. P1协议如何判断何时可写
+4. P1协议 异常中断，com板如何知道
+
 ====================================================================
 [Attachement]
      1. configure file sid.config, its content as below

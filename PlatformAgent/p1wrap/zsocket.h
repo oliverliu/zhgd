@@ -13,6 +13,7 @@
  */
 #include <string>
 #include <map>
+#include "platform.h"
 #include "safeSocket.h"
 
 const int MAX_CNT_COUNT=1024;
@@ -100,7 +101,8 @@ private:
     int  getSockIDFromID(int id);
      
     void initIDIP();
-    bool isFromSelf(const char * buffer);// the msg send by host client,such as connect, disconnect or transfer
+    // the msg send by host client,such as connect, disconnect or transfer
+    bool isFromSelf(const char * buffer);
     void getPackinfo(struct _packinfo& packinfo, char* buffer);
 
      bool addConnection (long longip,int sockid);
@@ -112,9 +114,10 @@ private:
     int procConnectCtrl(const char * buffer);
     int procDisconnectCtrl(const char * buffer);
     int procTransferCtrl(const char * buffer);
+    void procSelfDataInternal(const char* key);
 
-    void initConnectState(const char *  _ppack, const unsigned int  did, const unsigned int  sid,
-                int type, int connectvalue);
+    void initConnectState(const char *  _ppack, const unsigned int  did, 
+        const unsigned int  sid,int type, int connectvalue);
     bool needMonitor(int sockid);
 private:
 
@@ -137,8 +140,11 @@ private:
 
     //save data in db, the data is little endian, that used for app_get/app_set
     unsigned char m_dbBuf[SIZE];
+
+    int m_maxSetNums;
 };
 
+/*
 class ZSocketClient : public ZSocket
 {
 public:
@@ -165,5 +171,6 @@ private:
     //ZSocket *m_sockClient;
     int      m_sockId;//socket between self and agent 
 };
+*/
 
 #endif

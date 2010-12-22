@@ -53,7 +53,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDLL;_DEBUG;Q_WS_WIN;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDLL;_DEBUG;WINDOWS_PLAT;Q_WS_WIN;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\p1wrap;..\..\platformutility\platformutility\src;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

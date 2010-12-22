@@ -1,11 +1,5 @@
-﻿#ifndef _PLATFORM_H
+#ifndef _PLATFORM_H
 #define _PLATFORM_H
-
-#define  WINDOWS_PLAT
-
-// Build in the platform of VxWorks
-//#define VXWORKS_PLAT
-//#define _DEBUG_PRINT
 
 #ifdef VXWORKS_PLAT
 
@@ -15,13 +9,7 @@
 #include <selectLib.h>
 #include <time.h>
 #include <errno.h>
-
-
-#elif  defined (LINUX_PLAT)
-
-#include <error.h>
-#include <sys/time.h>
-#include <errno.h>
+#include <pthread.h>
 
 /* parameter of function platform_pthread_create */
 #define  PLATFORM_PTHREAD_CREATE_PARA(start_addr)  void * (* start_addr)(void *)
@@ -32,8 +20,24 @@
 /* prefix of thread function */
 #define  PLATFORM_THREAD_PREFIX         void *
 
+#elif  defined (LINUX_PLAT)
 
-#else
+#include <error.h>
+#include <sys/time.h>
+#include <errno.h>
+#include <pthread.h>
+#include <netinet/in.h>
+
+/* parameter of function platform_pthread_create */
+#define  PLATFORM_PTHREAD_CREATE_PARA(start_addr)  void * (* start_addr)(void *)
+
+/* type of thread return value */
+#define  PLATFORM_THREAD_RETURN_VALUE   void *
+
+/* prefix of thread function */
+#define  PLATFORM_THREAD_PREFIX         void *
+
+#elif  defined (WINDOWS_PLAT)
 
 /* header file */
 #include  <Winsock2.h>
@@ -42,6 +46,7 @@
 #include  <process.h>
 #include  <stdio.h>
 #include  <sys/stat.h>
+#include  <stdint.h>
 
 
 /* variable type convention */
@@ -72,9 +77,6 @@
 /* prefix of thread function */
 #define  PLATFORM_THREAD_PREFIX        unsigned  __stdcall
 
-
-
-
 /* function declaration */
 
 /* load socket lib */
@@ -82,13 +84,13 @@ int  safeSocket_loadSockLib (void);
 
 #define   snprintf    _snprintf
 
-#endif //VXWORKS_PLAT
+#else
+#error "Platform not supported."
 
+#endif 
 
 
 #define  PLATFORM_ZERO     0
-
-
 /* function declaration */
 
 /* init condition variable */
@@ -100,7 +102,8 @@ void  platform_cond_signal (pthread_cond_t *  pCond);
 /* wait for condition variable until it's signaled */
 void  platform_cond_wait (pthread_cond_t *  pCond);
 
-
+/* wait for condition variable until it's signaled or timeout */
+void  platform_cond_timewait (pthread_cond_t *  pCond, int timeout);
 
 /* init mutex variable */
 int  platform_mutex_init (pthread_mutex_t *  pMutex);
@@ -111,13 +114,14 @@ void  platform_mutex_lock (pthread_mutex_t *  pMutex);
 /* unlock releasing mutex */
 void  platform_mutex_unlock (pthread_mutex_t *  pMutex);
 
-
 /* create thread */
 int  platform_pthread_create (pthread_t * tidp, PLATFORM_PTHREAD_CREATE_PARA(start_addr));
 
 /* close socket */
 void  platform_socket_close (int socket);
 
+/* thread join */
+void  platform_pthread_join (pthread_t thread, void **value_ptr );
 
 #endif //_PLATFORM_H
 

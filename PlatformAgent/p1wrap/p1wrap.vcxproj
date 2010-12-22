@@ -49,7 +49,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDLL;Q_WS_WIN;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDLL;Q_WS_WIN;WINDOWS_PLAT;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\platformutility\platformutility\src;</AdditionalIncludeDirectories>
       <UndefinePreprocessorDefinitions>
       </UndefinePreprocessorDefinitions>
@@ -60,7 +60,7 @@
       <AdditionalDependencies>SafeProtocol.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
-      <AdditionalDependencies>SafeProtocol.lib</AdditionalDependencies>
+      <AdditionalDependencies>p1_windows.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
     </Lib>
@@ -113,7 +113,6 @@ copy "$(TargetDir)$(TargetFileName)"  ..\..\platformlib\platformlib</Command>
     <ClInclude Include="..\..\platformutility\platformutility\src\zredis.h" />
     <ClInclude Include="platform.h" />
     <ClInclude Include="safeSocket.h" />
-    <ClInclude Include="safeStruct.h" />
     <ClInclude Include="zsocket.h" />
   </ItemGroup>
   <ItemGroup>

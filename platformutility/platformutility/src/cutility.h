@@ -31,7 +31,7 @@ public:
 	static  PLAT_UINT32 setBitsVal(const PLAT_UINT32 dst, PLAT_UINT8 start, PLAT_UINT8 end, PLAT_UINT32 val);
 
 	static void outputPackage(const PLAT_UBYTE * buf, FILE* fp);
-    static void outputLittlepack(const unsigned char * buffer);
+       static void outputLittlepack(const unsigned char * buffer);
 
 	static PLAT_UINT16      ByteSwap16 (PLAT_UINT16 nValue);
 	static PLAT_UINT32      ByteSwap32 (PLAT_UINT32 nLongNumber);
@@ -59,13 +59,27 @@ public:
 	static PLAT_UINT32 getLittlePackSize(const PLAT_UBYTE* littlepack);//including head
 	static bool updateLittlePack(const PLAT_UBYTE* littpackSrc, PLAT_UBYTE* littlepackDst);
 
-    static PLAT_UINT32 getLinkStateDID(const PLAT_UBYTE*  plinkstatePack);
-    static PLAT_UINT32 getLinkStateSID(const PLAT_UBYTE*  plinkstatePack);
+       //link state package
+       static PLAT_UINT32 getLinkStateDID(const PLAT_UBYTE*  plinkstatePack);
+       static PLAT_UINT32 getLinkStateSID(const PLAT_UBYTE*  plinkstatePack);
+	static PLAT_UINT8   getLinkStateType(const PLAT_UBYTE* plinkstatePack);
+	// return value: true: is connect command
+	//                     fasle: is disconnect command
+       static bool	isConnectCmdLinkState(const PLAT_UBYTE* plinkstatePack);
+	   
 	//Big package
 	static PLAT_UINT32 getUnitCounts(const PLAT_UBYTE* bigPackHead);
 	static PLAT_UBYTE* getUnitHead(const PLAT_UBYTE* bigPackHead, PLAT_UINT32 indx); //start from 0;
 	static void        initBigPackIdx(PLAT_UBYTE* p);
 	static void        updateBigPackIdx(PLAT_UBYTE* bigPackHead, const T_DATA_INDEX & idxData);     
+
+	//is CC terminal's ID return true; else return false
+	//0xfxxxx
+	static bool isCCID(const PLAT_UINT32 id);
+	//0x6xxx
+	static PLAT_UINT32 getAtpIDFromCC(const PLAT_UINT32 ccid);
+	//0x4xxx
+	static PLAT_UINT32 getAtoIDFromCC(const PLAT_UINT32 ccid);
 
 private:
     // isBigEndianP means bigPackHead is big endian, when get unit count form index.

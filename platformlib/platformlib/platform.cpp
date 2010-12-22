@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "zsocket.h"
+//#include "zsocket.h"
 #include "wintimer.h"
 #include "platform.h"
 #include "cutility.h"
@@ -55,19 +55,19 @@ CAppInterface::CAppInterface()
     m_pzc = new CZc();
     //m_pei = new packetprocess();
     m_pRedis = new ZRedis();
-    m_pSockClient = new  ZSocketClient();
-    m_pSockClient->setLog("agent_client.log");
+    // m_pSockClient = new  ZSocketClient();
+    //m_pSockClient->setLog("agent_client.log");
 
     setLog("fromTerminalLog_liboutput.txt");
 }
 
 CAppInterface::~CAppInterface()
 {
-    if (m_pSockClient)
-    {
-        delete m_pSockClient;
-        m_pSockClient = NULL;
-    }
+   // if (m_pSockClient)
+   // {
+   //     delete m_pSockClient;
+   //     m_pSockClient = NULL;
+  //    }
 
      if ( m_pRedis )
      {
@@ -129,11 +129,11 @@ PLAT_INT32 CAppInterface::AppInit()
         strDbvalue.c_str(), strAgentServer.c_str(), m_srcID);
 
     //connect server agent
-    if( m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
-    {
-        plog("Failed: Socket client connect agent server\n");
-        ret = -1;
-    }
+    //if( m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
+    //{
+    //    plog("Failed: Socket client connect agent server\n");
+    //    ret = -1;
+    //}
     //app_init(uintBuf,s_host);
 
     return ret;
@@ -172,10 +172,10 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
 
     plog("Address: database = %s, agentip = %s, self SID = %0x\n",
         strDbvalue.c_str(), strAgentServer.c_str(), m_srcID);
-    if(m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
-    {
-        plog("Failed: Socket client connect agent server\n");
-    }
+    //if(m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
+    //{
+    //    plog("Failed: Socket client connect agent server\n");
+    //}
 
     return 0;
 }
@@ -230,6 +230,9 @@ PLAT_INT32 CAppInterface::AppWrite()
     }   
     //sprintf(src, "%08x", m_srcID);  
     sprintf(src, "%08x", m_srcID);  
+
+    static char selfIDkey[32]="\0";
+    sprintf(selfIDkey, "%s%08x", "self", m_srcID);
 
 
     int count = CUtility::getUnitCounts(send);
@@ -367,7 +370,9 @@ PLAT_INT32 CAppInterface::AppWrite()
                 }
                 else
                 {
-                   if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                    if ( m_bUseP1 )
+                         m_pRedis->app_rpush(selfIDkey, uintBuf);
+                         //m_pSockClient->transferTerminal((const char*) uintBuf,len);
                 }
                 m_pRedis->app_rpush(dstID, uintBuf);   
                 continue;
@@ -378,7 +383,13 @@ PLAT_INT32 CAppInterface::AppWrite()
                plog("Msg link control data\n");
                  //not need transfer
                 // connect / disconnet did, and recode result into platform buffer
-                procConnectControl(uintBuf); 
+                // procConnectControl(uintBuf); 
+                if ( m_bUseP1 ) 
+                  m_pRedis->app_rpush(selfIDkey, uintBuf);
+                
+               
+                
+                
                 continue;
             }
             case 0xC://1100; Event record data
@@ -439,8 +450,7 @@ PLAT_INT32 CAppInterface::AppWrite()
         
         //If destination terminal is CC, Now push little package into ATP and 
         // ATO respectively
-        if ( (dstID &0xF0000000) == 0xf0000000)
-        //if((dstID&0x00000FF0)==0x00000FF0)
+        if ( CUtility::isCCID(dstID))
         {
             plog("This is destination is CC\n");
             //ATP
@@ -461,7 +471,9 @@ PLAT_INT32 CAppInterface::AppWrite()
             //push little package into correspond destination ID buffer in DB
             m_pRedis->app_rpush(dstID, uintBuf); 
         }
-        if ( m_bUseP1 ) m_pSockClient->transferTerminal((const char*) uintBuf,len);    
+        if ( m_bUseP1 )
+             m_pRedis->app_rpush(selfIDkey, uintBuf);
+           //m_pSockClient->transferTerminal((const char*) uintBuf,len);    
     }//end of for
  
     //restore write buffer data
@@ -715,6 +727,7 @@ void CAppInterface::procMsgOut(PLAT_UBYTE* p)
 }
 
 //for doc v6, 2010.12
+/*
 void CAppInterface::procConnectControl(PLAT_UBYTE* p)
 {
     typedef struct _linkCtrl
@@ -778,6 +791,7 @@ void CAppInterface::procConnectControl(PLAT_UBYTE* p)
     //update terminals state
     m_pzc->updateNotifyTerminal(dstID, true);
 }
+*/
 
 //this is for tengguodong, doc v5, 2010.11
 //void CAppInterface::procConnectControl(PLAT_UBYTE* p)
@@ -879,7 +893,12 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
         
         //transfer it, broadcast message DID can not gotten from little packe 
         // which DID is ffff
-        if ( m_bUseP1 ) m_pSockClient->transferTerminal(*it, (const char*) p); 
+        //if ( m_bUseP1 ) m_pSockClient->transferTerminal(*it, (const char*) p); 
+
+        char tmp2[32];
+        sprintf(tmp2,"self%08x",*it);
+        m_pRedis->app_rpush(tmp2, uintBuf);
+        
             
      }
 }

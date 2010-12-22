@@ -415,7 +415,7 @@ void CPackUtility::pushZC2CC_RoutinMsg()
 	memset(pArray, 0, 1024*8);
 	PLAT_UBYTE *ptmpH = pArray;
 
-    const PLAT_UINT32 did = 0xc0000001;//to ato
+    const PLAT_UINT32 did = 0xf0000001;//to ato
     const PLAT_UINT32 sid = 0x20000001;
 
 	T_UNIT_HEAD     unithead;
@@ -588,11 +588,22 @@ void createTestAtp()
 
 	CPackUtility	packUtil(dstBuf);
     printf("Pre: create connect\n");
-    packUtil.pushZC2CreateConnect(true);//create link
+    static bool binit = false;
+    if ( binit )
+    {
+         printf("ATP Send data to ZC\n");
+         packUtil.pushAtp2ZC_linkdataOutput();
+    }
+
+    if (!binit)
+    {
+        printf("ATP Connect ZC\n");
+        packUtil.pushZC2CreateConnect(true);//create link
+        binit = true;
+    }
     //packUtil.pushZC2CreateConnect(false);//delete link
      //通信报文输出
-    packUtil.pushAtp2ZC_linkdataOutput();
-
+    
 
     if(CUtility::needSwap())
         CUtility::bigPackToBE(dstBuf);

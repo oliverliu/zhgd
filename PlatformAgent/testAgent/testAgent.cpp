@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "zsocket.h"
+//#include "platform.h"
 
 #include <stdlib.h>
 #include <string>
@@ -73,77 +74,47 @@ int connect1025Server_1(int port,int seconds)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-       //if( client.connect1025Server_1(1087,3) < 0)
-    //if( connect1025Server_1(1086,3) == 0)
+    return 1;
+ 
+    //ZSocketClient client;
+    //bool bret = false;
+    //if (client.connectDb() < 0)
+    //{
+    //    printf("Failed: Connect db\n");
+    //    return -1;
+    //}
+
+    ///*if( client.connectServer("127.0.0.1",1087,3) < 0)
     //{
     //    printf("FAiled: Socket client connect agent server\n");
-    //}
+    //} 
+    //*/
+    ////debug
+    //if( client.connectServer("127.0.0.1",1086,3) < 0)
+    //{ 
+    //    printf("FAiled: Socket client connect agent server\n"); 
+    //    getchar(); 
+    //    return 0; 
+    //} 
+    ////if( client.connect1025Server_1(1087,3) < 0)
+    ////  //if( connect1025Server_1(1087,3) == 0) 
+    ////  {
+    ////       printf("FAiled: Socket client connect agent server\n");
+    ////  } 
+    ////
+    //int ret =  client.connectTermianl(0x20000002); 
     //
-     
-    ZSocketClient client;
-    bool bret = false;
-    if (client.connectDb() < 0)
-    {
-        printf("Failed: Connect db\n");
-        return -1;
-    }
-
-    /*if( client.connectServer("127.0.0.1",1087,3) < 0)
-    {
-        printf("FAiled: Socket client connect agent server\n");
-    } 
-    */
-    //debug
-    if( client.connectServer("127.0.0.1",1086,3) < 0)
-    { 
-        printf("FAiled: Socket client connect agent server\n"); 
-        getchar(); 
-        return 0; 
-    } 
-    //if( client.connect1025Server_1(1087,3) < 0)
-    //  //if( connect1025Server_1(1087,3) == 0) 
-    //  {
-    //       printf("FAiled: Socket client connect agent server\n");
-    //  } 
+    ////ret =  client.disconnectTermianl(2);
     //
-    int ret =  client.connectTermianl(0x20000002); 
-    
-    //ret =  client.disconnectTermianl(2);
-    
-    char *s = "Absdsddddddddddddfsdfasdfc";
-    ret =  client.transferTerminal(s, strlen(s));
-    s =  "A000bsdsdddddddd ddddfsdfasdfc";
-    ret =  client.transferTerminal(s, strlen(s));
+    //char *s = "Absdsddddddddddddfsdfasdfc";
+    //ret =  client.transferTerminal(s, strlen(s));
+    //s =  "A000bsdsdddddddd ddddfsdfasdfc";
+    //ret =  client.transferTerminal(s, strlen(s));
 
-    printf("getchar to quit\n"); 
-    getchar();
+    //printf("getchar to quit\n"); 
+    //getchar();
 
     return 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
