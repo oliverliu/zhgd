@@ -18,6 +18,29 @@
 
 #define PLATUNITID(sid, did)  (sid & did << sizeof(PLAT_UINT32))
 
+typedef struct connectStateData
+{
+    //case 0x10: connect add; 0x11: connect remove for connect cmd
+    //case 0x55: link work; 0x55: link unwork for connect state
+        PLAT_UBYTE ctrlReq; 
+        PLAT_UBYTE resv1[3];
+        PLAT_UINT sid;
+        PLAT_UINT did;
+        PLAT_UINT msgype;
+        PLAT_UINT msglen;
+}tConStateData;
+
+//
+//typedef struct connectStateData
+//{
+//    PLAT_UBYTE result;
+//    PLAT_UBYTE resver1[3];
+//    PLAT_UINT sid;
+//    PLAT_UINT did;
+//    PLAT_UINT msgype;
+//    PLAT_UINT msglen;
+//}tConStateData;
+
 //#define _CRT_SECURE_NO_WARNINGS 
 // The output / input data for platform are big endian sequence
 // When enter our loop, transfer them to little endian and leave transfer them to big endian
@@ -63,6 +86,7 @@ public:
        static PLAT_UINT32 getLinkStateDID(const PLAT_UBYTE*  plinkstatePack);
        static PLAT_UINT32 getLinkStateSID(const PLAT_UBYTE*  plinkstatePack);
 	static PLAT_UINT8   getLinkStateType(const PLAT_UBYTE* plinkstatePack);
+    static PLAT_UINT8   getLinkStateResult(const PLAT_UBYTE* plinkstatePack);
 	// return value: true: is connect command
 	//                     fasle: is disconnect command
        static bool	isConnectCmdLinkState(const PLAT_UBYTE* plinkstatePack);

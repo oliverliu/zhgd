@@ -615,8 +615,9 @@ void createTestAto()
     unsigned char* dstBuf = APP_WRITE_ADDR;
 
 	CPackUtility	packUtil(dstBuf);
-    printf("Pre: ato 2 zc msg is not support for now\n");
+    printf("Pre: ato get link state for now\n");
 
+    //get db data that is through app_set  in db, now get it
      //通信报文输出
     packUtil.pushAtp2ZC_linkdataOutput();
 

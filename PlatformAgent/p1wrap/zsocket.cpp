@@ -1,9 +1,14 @@
-
-
 #include <stdio.h>
 #include <stddef.h>
 #include <vector>
-#include "platform.h"
+#include <string.h>
+#include <stdarg.h>
+
+#ifndef  Q_WS_WIN
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 #include "zsocket.h"
 #include "INIReader.h"
@@ -232,11 +237,10 @@ int ZSocket::connectTerminal(unsigned int did,int port,int timeout_nouse)
     }
 
      //safeSocket_getSockopt(int safeSock, int level, int optname, void* optval, socklen_t *optlen);
-    int d = 0;
-    int optval = 0;
-    safeSocket_getSockopt(sockid,SOL_SAFESOCKET,SS_LINK_STATUS, (void*) &optval, &d);
-    plog("---------- safeSocket_getSockopt optval = %d, optlen = %d\n", optval, d);
-
+    //int d = 0;
+    //int optval = 0;
+    //safeSocket_getSockopt(sockid,SOL_SAFESOCKET,SS_LINK_STATUS, (void*) &optval, &d);
+    //plog("---------- safeSocket_getSockopt optval = %d, optlen = %d\n", optval, d);
 
     plog("Set connect result is FAILED for temporarily, the value will be "
            "changed when Except_set is set later.\n");
@@ -807,34 +811,36 @@ bool ZSocket::isFromSelf(const char * buffer)
 //data input is DID
 int ZSocket::sendConnect(int sockid,const char* data, int size, int flag)
 {
-    char buf[64] = "\0";
-    static string strdst = "selfconnect";
-
-    if ( size + strdst.length() >= 64 ) 
-    {
-        plog("Warning: message content between self and agent size too large!!!");
-        exit(-1);
-    }
-    memcpy(buf, strdst.c_str(), strdst.length());
-    memcpy(buf + strdst.length(), data, size);
-
-    return write(sockid, buf, strlen(buf), flag);
+    return 0;
+//    char buf[64] = "\0";
+//    static string strdst = "selfconnect";
+//
+//    if ( size + strdst.length() >= 64 ) 
+//    {
+//        plog("Warning: message content between self and agent size too large!!!");
+//        exit(-1);
+//    }
+//    memcpy(buf, strdst.c_str(), strdst.length());
+//    memcpy(buf + strdst.length(), data, size);
+//
+//    return write(sockid, buf, strlen(buf), flag);
     //return write(sockid, buf, strdst.length() + size, flag);
 }
 //data input is DID
 int ZSocket::sendDisConnect(int sockid, const char* data, int size, int flag)
 {
-    char buf[64] = "\0";
-    static string strdst = "selfdisconnect";
-    if ( size + strdst.length() >= 64 ) 
-    {
-        plog("Warning: message content between self and agent size too large!!!");
-        exit(-1);
-    }
-    memcpy(buf, strdst.c_str(), strdst.length());
-    memcpy(buf + strdst.length(), data, size);
-
-    return write(sockid, buf, strdst.length() + size, flag);
+    return 0;
+//    char buf[64] = "\0";
+//    static string strdst = "selfdisconnect";
+//    if ( size + strdst.length() >= 64 ) 
+//    {
+//        plog("Warning: message content between self and agent size too large!!!");
+//        exit(-1);
+//    }
+//    memcpy(buf, strdst.c_str(), strdst.length());
+//    memcpy(buf + strdst.length(), data, size);
+//
+//    return write(sockid, buf, strdst.length() + size, flag);
 }
 
 //data input is littlepack content

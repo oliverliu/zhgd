@@ -1,7 +1,8 @@
-#include <string>
+//#include <string>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 //#include "zsocket.h"
 #include "wintimer.h"
@@ -940,7 +941,7 @@ PLAT_INT32 CAppInterface::AppRead()
     int len = m_pRedis->app_llen(src);
     for(int j =0;j <len;j++)
     {
-        memset(&uintBuf, 0x00, SIZE);
+         memset(&uintBuf, 0x00, SIZE);
          m_pRedis->app_lpop(m_srcID, uintBuf);
 
         if(CUtility::needSwap())
@@ -971,6 +972,8 @@ PLAT_INT32 CAppInterface::AppRead()
     for (unsigned int idx = 0; idx < unitCounts; idx++)
     {
         PLAT_UBYTE * p = CUtility::getUnitHead(m_dbBuf, idx);
+        plog ("link state %08x to %08x is %x\n", CUtility::getLinkStateSID(p),
+            CUtility::getLinkStateDID(p),CUtility::getLinkStateResult(p));
         CUtility::pushBackPack(recv, p);
     }
 

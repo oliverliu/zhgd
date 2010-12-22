@@ -45,17 +45,6 @@
 #include <arpa/inet.h>
 #endif
 
-typedef struct connectStateData
-{
-        PLAT_UBYTE ctrlReq; //case 0x10: connect add; 0x11: connect remove
-        PLAT_UBYTE resv1[3];
-        PLAT_UINT sid;
-        PLAT_UINT did;
-        PLAT_UINT msgype;
-        PLAT_UINT msglen;
-}tConStateData;
-
-
 static bool isBigEndian()
 {
    short word = 0x4321;
@@ -400,6 +389,11 @@ PLAT_UINT8   CUtility::getLinkStateType(const PLAT_UBYTE* plinkstatePack)
        memcpy(&st, plinkstatePack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD),
                      sizeof(tConStateData));
        return st.ctrlReq;
+}
+
+PLAT_UINT8   CUtility::getLinkStateResult(const PLAT_UBYTE* plinkstatePack)
+{ 
+    return getLinkStateType(plinkstatePack);
 }
 
 bool CUtility::isConnectCmdLinkState(const PLAT_UBYTE* plinkstatePack)
