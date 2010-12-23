@@ -73,6 +73,8 @@ public:
 	static  PLAT_UINT32 getSrcIDInternal();
 		
 	static bool        hasMsgHead(const PLAT_UBYTE * littlepack);
+    static bool        isLinkMsg(const PLAT_UBYTE * littlepack);
+
 	static PLAT_UINT32 getLittlePackDataType(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackDataInfo(const PLAT_UBYTE * littlepack);
 	static PLAT_UINT32 getLittlePackUID(const PLAT_UBYTE * littlepack);
@@ -114,6 +116,7 @@ private:
         static void         swapLittlePackage(PLAT_UBYTE * littlepack, bool isBigEndianP);
         static void         swapUnitHead(PLAT_UBYTE * littlepack);
         static void         swapUnitMsgHead(PLAT_UBYTE * littlepack);
+        static void         swapLinkMsg(PLAT_UBYTE * littlepack);
 
 };
 
@@ -200,8 +203,8 @@ public:
         bool isBroad() const;
         bool isConnectState() const;
         
-        PLAT_UINT8 getConnectState();
-        PLAT_UINT8 getConnectControl();
+        //PLAT_UINT8 getConnectState();
+        //PLAT_UINT8 getConnectControl();
 
         PLAT_UINT32 getUnitID() const {return m_header.unitId;}
         PLAT_UBYTE* getDataHeader() const { return m_pData;}
@@ -211,7 +214,7 @@ public:
         PLAT_UINT32 getSrcID() const;
 
 
-        void setConnectState(PLAT_UINT8 val);
+        //void setConnectState(PLAT_UINT8 val);
 
 private:        
         PLAT_UINT32 ATO_GetDestID() const; /*得到ATO发送数据包中各单元的目的地ID*/
@@ -222,8 +225,8 @@ private:
         void init();
         PLAT_UINT32 dataType() const;
         bool hasMsgHeader() const;
-        PLAT_UINT8 getByteData(int byteidx);
-        void setByteData(int byteidx, PLAT_UINT8 val);
+        //PLAT_UINT8 getByteData(int byteidx);
+        //void setByteData(int byteidx, PLAT_UINT8 val);
         PLAT_UINT32 getDstIDInternal() const;
 private:
         PLAT_UINT32 m_fromID;

@@ -151,7 +151,7 @@ void CPackUtility::pushZC2CreateConnect(bool bcreate)
 
     tLinkCtrl cmd;
     memset(&cmd, 0, sizeof(tLinkCtrl));
-    cmd.ctrlReq = 0x10;
+    cmd.ctrlReq = 0x10; 
     cmd.sid =  sid;
     cmd.did = did;
 
@@ -684,11 +684,11 @@ int _tmain(int argc, char* argv[])
         memcpy(APP_WRITE_ADDR_SWAP, APP_WRITE_ADDR, NETSIZE);
         if(CUtility::needSwap())
             CUtility::bigPackToLE(APP_WRITE_ADDR_SWAP);
-	    fprintf(fp, "Write: \n");
+	    fprintf(fp, "Write to in little endian: \n");
 	    CUtility::outputPackage(APP_WRITE_ADDR_SWAP, fp);
 
         WriteToPlatform();
-
+        
         fflush(fp);
 
         puts ("If want to continue do again, please input 'y'. Otherwise quit\n");

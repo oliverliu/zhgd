@@ -114,7 +114,7 @@ private:
     bool isDisconnectCtrl(const char * buffer);
     int procConnectCtrl(const char * buffer);
     int procDisconnectCtrl(const char * buffer);
-    int procTransferCtrl(const char * buffer);
+    int procTransferCtrl(unsigned char * buffer);
     void procSelfDataInternal(const char* key);
 
     void initConnectState(const char *  _ppack, const unsigned int  did, 
@@ -139,7 +139,8 @@ private:
     std::map<int,std::string> m_mapID2IP;
     ZRedis* m_pRedis;
 
-    //save data in db, the data is little endian, that used for app_get/app_set
+     //save data in db, the data is little endian, that used for app_get/app_set
+    //When wirte out linkstate, it will convert to big endian through temporary variable
     unsigned char m_dbBuf[SIZE];
 
     int m_maxSetNums;

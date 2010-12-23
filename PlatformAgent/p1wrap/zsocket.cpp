@@ -246,13 +246,22 @@ int ZSocket::connectTerminal(unsigned int did,int port,int timeout_nouse)
            "changed when Except_set is set later.\n");
     PLAT_UBYTE pack[1024] = "\0" ;
     initPackage(pack,did, 0,0);
-    CUtility::pushBackPack(m_dbBuf, pack);
-    
-    m_pRedis->app_set("linkstate", m_dbBuf);
+    updateDbBuffer(pack);
+    //CUtility::pushBackPack(m_dbBuf, pack);
+
+    plog("Write to DB value is in little endian\n");
+    outputLittlepack(pack);
+
+    unsigned char dbBuf[SIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, SIZE);
+    if (CUtility::needSwap())
+    {
+        CUtility::bigPackToBE(dbBuf);
+    }
+    m_pRedis->app_set("linkstate", dbBuf);
 
     return ret;
 }
-
 
 //init connect state unit package
 //type: 0: create connect
@@ -332,6 +341,7 @@ void ZSocket::initPackage(unsigned char *  _ppack, PLAT_UINT did,
 
 void ZSocket::updateDbBuffer(unsigned char *  ppack)
 {
+    bool bfind = false;
     PLAT_UINT32 sid = CUtility::getLinkStateSID(ppack);
     
     PLAT_UINT64 id = PLATUNITID(sid,
@@ -349,9 +359,12 @@ void ZSocket::updateDbBuffer(unsigned char *  ppack)
         {
             //update the unit data
             CUtility::updateLittlePack((PLAT_UBYTE*)ppack, unit);
+            bfind = true;
         }
     }
 
+    if (!bfind)
+        CUtility::pushBackPack(m_dbBuf, ppack);
 }
 
 int ZSocket::disconnectServer(char* ip)
@@ -396,7 +409,13 @@ int ZSocket::disconnectTerminal(int did)
     updateDbBuffer(pack);
     
     plog("Update data info in DB for conect with %s.\n", value.c_str());
-    m_pRedis->app_set("linkstate", m_dbBuf);
+    unsigned char dbBuf[SIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, SIZE);
+    if (CUtility::needSwap())
+    {
+        CUtility::bigPackToBE(dbBuf);
+    }
+    m_pRedis->app_set("linkstate", dbBuf);
 }
 
 //int ZSocket::getWriteSocket(const char *ip,int port,int timeout)
@@ -846,6 +865,8 @@ int ZSocket::sendDisConnect(int sockid, const char* data, int size, int flag)
 //data input is littlepack content
 int ZSocket::sendTransfer(int sockid,const char* data, int size, int flag)
 {
+     return 0;
+/*
     char buf[64+SIZE] = "\0";
     static string strdst = "selftransfer";
 
@@ -860,6 +881,7 @@ int ZSocket::sendTransfer(int sockid,const char* data, int size, int flag)
     plog("\n");
 
     return write(sockid, buf, strdst.length() + size, flag);
+    */
 }
 
 //buffer content is "selfconnect#ID.."
@@ -982,11 +1004,11 @@ int ZSocket::procConnectCtrl(const char * buffer)
 {
     bool badd = false;
     int sockid = 0;
-    char msghead[] = "selfconnect";
-    unsigned int did = 0; 
-    sscanf(buffer + strlen(msghead),"%d", &did);
-    
-    sockid = connectTerminal(did,1086,163);  
+    //char msghead[] = "selfconnect";
+    //unsigned int did = 0; 
+    //sscanf(buffer + strlen(msghead),"%d", &did);
+    //
+    //sockid = connectTerminal(did,1086,163);  
     return sockid;
 }
 
@@ -1002,8 +1024,8 @@ int ZSocket::procDisconnectCtrl(const char * buffer)
     return bret;
 }
 
-//buffer content is  littlepackage
-int ZSocket::procTransferCtrl(const char * buffer)
+//buffer content is  littlepackage, buffer is little endian
+int ZSocket::procTransferCtrl(unsigned char * buffer)
 {
      //the data format is : "selftransfer"  + littlepack content
     unsigned int did = 0;
@@ -1016,19 +1038,25 @@ int ZSocket::procTransferCtrl(const char * buffer)
     //pop form db and send out
     char popOutBuf[SIZE] = "\0";
     if(1)
+        //only just for pop it,
+        //popOutBuf is not used for now
          m_pRedis->app_lpop(pack.did,(unsigned char*)popOutBuf);
-    else
-    {
-        //another method
-        memcpy(popOutBuf, buffer, pack.size);
-        //write out the popOut2 without db support
-    }
+    //else
+    //{
+    //    //another method
+    //    memcpy(popOutBuf, buffer, pack.size);
+    //    //write out the popOut2 without db support
+    //}
 
     int sockidTo = getSockIDFromID(pack.did);
     //if (sockidTo > 0 && canWrite(sockidTo,3))
     if (sockidTo > 0 ) // for now do not judge
     {
-        byteSent = write (sockidTo, buffer, pack.size, 0);
+        if (CUtility::needSwap())
+        {
+            CUtility::littlePackToBE(buffer);
+        }
+        byteSent = write (sockidTo,(const char*) buffer, pack.size, 0);
         if (byteSent == SS_FAILED)
         {
             int errNumber = safeSocket_getErrorNum (sockidTo);
@@ -1037,7 +1065,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
         }
         // We got some data
         plog("write to sockid %d, sid=%0x, did = %08x write out %d bytes \n",
-                   sockidTo,pack.sid, pack.did, byteSent);     
+                sockidTo,pack.sid, pack.did, byteSent);     
       
     }
     else
@@ -1048,59 +1076,57 @@ int ZSocket::procTransferCtrl(const char * buffer)
     return byteSent;
 }
 
-/*
 //buffer content is "selftransfer" + littlepackage
-int ZSocket::procTransferCtrl(const char * buffer)
-{
-     //the data format is : "selftransfer"  + littlepack content
-    char msghead[] = "selftransfer";
-    unsigned int did = 0;
-    int byteSent = -1;
-
-    char msgLittleBuf[SIZE] = "\0";
-    memcpy(msgLittleBuf, buffer + strlen(msghead),SIZE);
-    
-    char dd[22] = "\0";
-    memcpy(dd, buffer, strlen(msghead));
-    //plog("data: %s,", dd);
-
-    plog("Recevied data from self terminal ");
-    s_packinfo pack;
-    getPackinfo(pack,msgLittleBuf);
-
-    //pop form db and send out
-    char popOutBuf[SIZE] = "\0";
-    if(1)
-         m_pRedis->app_lpop(pack.did,(unsigned char*)popOutBuf);
-    else
-    {
-        //another method
-        memcpy(popOutBuf, buffer + sizeof(msghead), pack.size);
-        //write out the popOut2 without db support
-    }
-
-    int sockidTo = getSockIDFromID(pack.did);
-    if (sockidTo > 0 && canWrite(sockidTo,3))
-    {
-        byteSent = write (sockidTo, msgLittleBuf, pack.size, 0);
-        if (byteSent == SS_FAILED)
-        {
-            int errNumber = safeSocket_getErrorNum (sockidTo);
-            plog ("Failed: data to be sent, errNumber = %u\n", errNumber);
-            return byteSent;
-        }
-        // We got some data
-        plog("write to sockid %d, sid=%0x, write out %d bytes \n",sockidTo,pack.sid, byteSent);     
-      
-    }
-    else
-    {
-        plog("Error: In procTransferCtrl, did = %08x, sockidTo = %d, do not write out!\n",
-              pack.did, sockidTo);
-    }
-    return byteSent;
-}           
-*/
+//int ZSocket::procTransferCtrl(const char * buffer)
+//{
+//     //the data format is : "selftransfer"  + littlepack content
+//    char msghead[] = "selftransfer";
+//    unsigned int did = 0;
+//    int byteSent = -1;
+//
+//    char msgLittleBuf[SIZE] = "\0";
+//    memcpy(msgLittleBuf, buffer + strlen(msghead),SIZE);
+//    
+//    char dd[22] = "\0";
+//    memcpy(dd, buffer, strlen(msghead));
+//    //plog("data: %s,", dd);
+//
+//    plog("Recevied data from self terminal ");
+//    s_packinfo pack;
+//    getPackinfo(pack,msgLittleBuf);
+//
+//    //pop form db and send out
+//    char popOutBuf[SIZE] = "\0";
+//    if(1)
+//         m_pRedis->app_lpop(pack.did,(unsigned char*)popOutBuf);
+//    else
+//    {
+//        //another method
+//        memcpy(popOutBuf, buffer + sizeof(msghead), pack.size);
+//        //write out the popOut2 without db support
+//    }
+//
+//    int sockidTo = getSockIDFromID(pack.did);
+//    if (sockidTo > 0 && canWrite(sockidTo,3))
+//    {
+//        byteSent = write (sockidTo, msgLittleBuf, pack.size, 0);
+//        if (byteSent == SS_FAILED)
+//        {
+//            int errNumber = safeSocket_getErrorNum (sockidTo);
+//            plog ("Failed: data to be sent, errNumber = %u\n", errNumber);
+//            return byteSent;
+//        }
+//        // We got some data
+//        plog("write to sockid %d, sid=%0x, write out %d bytes \n",sockidTo,pack.sid, byteSent);     
+//      
+//    }
+//    else
+//    {
+//        plog("Error: In procTransferCtrl, did = %08x, sockidTo = %d, do not write out!\n",
+//              pack.did, sockidTo);
+//    }
+//    return byteSent;
+//}           
 
 //init connect state unit package
 void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,
@@ -1138,8 +1164,8 @@ void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,
         {
             ppack->unitId = 0;
             ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
-            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
-            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x23
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
+            ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //cv
             ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
             ppack->unitId = ppack->unitId;
         }
@@ -1148,8 +1174,8 @@ void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,
     {
         ppack->unitId = 0;
         ppack->unitId = CUtility::setBitsVal(ppack->unitId, 30, 31,1); //01
-        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //0000110
-        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //0x20
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 29, 24,6); //000110
+        ppack->unitId = CUtility::setBitsVal(ppack->unitId, 23, 16,cv); //cv
         ppack->unitId = CUtility::setBitsVal(ppack->unitId, 0, 15,0xff); //0xff
 
         ppack->unitId = ppack->unitId;
@@ -1188,7 +1214,16 @@ void ZSocket::updateConnectResult(int listnum, int result)
     initPackage(pack,dstID, 0,result);//default 1, successful
     updateDbBuffer(pack);
     
-    m_pRedis->app_set("linkstate", m_dbBuf);
+    plog("link state will be update to key linkstate in DB, its content is:\n");
+    outputLittlepack(pack);
+
+    unsigned char dbBuf[SIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, SIZE);
+    if (CUtility::needSwap())
+    {
+        CUtility::bigPackToBE(dbBuf);
+    }
+    m_pRedis->app_set("linkstate", dbBuf);
 }
 
 // listnum: Current item in connectlist for for loops
@@ -1279,7 +1314,8 @@ void ZSocket::readSocks()
                 //if create connect occure
                 if ( needMonitor(m_connectionList[i]) )
                 {
-                    plog("\nProcesss socket %d, ip =%s do sockect connect successful\n", 
+                    plog("\nGet exception SET be set, change link state in DB\n"
+                        "Processs socket %d, ip =%s do sockect connect successful\n", 
                     m_connectionList[i],getIPFromSockID(m_connectionList[i]).c_str());
                     updateConnectResult(i, 1);
                 }
@@ -1306,14 +1342,16 @@ void ZSocket::procSelfDataInternal(const char* key)
     int len = m_pRedis->app_llen(key);
      for(int j =0;j <len;j++)
      {
-        PLAT_UBYTE unitBuf[SIZE] = "\0";
-        m_pRedis->app_lpop(key, unitBuf);
-  
+         PLAT_UBYTE unitBuf[SIZE] = "\0";
+         m_pRedis->app_lpop(key, unitBuf);
          if(CUtility::needSwap())
          {
              //big endian to little endian for little package
              CUtility::littlePackToLE(unitBuf);
          }
+
+         plog("Content of selfkey=%s in DB\n",key);
+         outputLittlepack(unitBuf);
 
          PLAT_UINT32 datatype =  CUtility::getLittlePackDataType(unitBuf);
          switch (datatype)
@@ -1323,7 +1361,7 @@ void ZSocket::procSelfDataInternal(const char* key)
             {
                plog("Msg out / in data\n");
                plog("Self want to transfer data: true\n");
-               int len = procTransferCtrl((const char*)unitBuf);
+               int len = procTransferCtrl((unsigned char*)unitBuf);
                plog("procTransferCtrl data: length = %d\n", len);
             }
             break;
@@ -1335,8 +1373,8 @@ void ZSocket::procSelfDataInternal(const char* key)
                     plog("Msg link control data - create connection.\n");
                     int retsockid  = connectTerminal( CUtility::getLinkStateDID(unitBuf), 1086,163);
                      string str = retsockid != -1 ? "true" : "false";
-                     plog("Response self create connect CMD successful: "
-                     " connect return value = %d\n", retsockid);
+                     plog("Create connect %08x try : "
+                     " connect return value = %d\n", CUtility::getLinkStateDID(unitBuf), retsockid);
                     
                  }
                  else
@@ -1344,13 +1382,17 @@ void ZSocket::procSelfDataInternal(const char* key)
                     plog("Msg link control data - remvoe connection.\n");
                      int retsockid  = disconnectTerminal( CUtility::getLinkStateDID(unitBuf));
                      string str = retsockid != -1 ? "true" : "false";
-                     plog("Response self delete connect CMD successful: connect result = %s\n", 
-                             str.c_str());
+                     plog("Delete connect  %08x try : disconnect result = %s\n", 
+                             CUtility::getLinkStateDID(unitBuf), str.c_str());
                  }
             }
             break;
            default:
-              plog("Warning: Should not read the type data in selfSID key in db.\n");
+               {
+                 plog("Warning: Should not read the type data in selfSID key in db. datatype = %d\n",
+                                      datatype );
+                 plog("The little pack uid is %08x", CUtility::getLittlePackUID(unitBuf));
+               }
          }    
      }
      
@@ -1406,6 +1448,8 @@ void ZSocket::procLoop(int timeoutSeconds)
     plog("Timeout interval in procLoop %d mircroseconds\n", timeout.tv_usec/1000);
     while (1) 
     {
+        procSelfData();
+        
         preSockSet();
         int readsocks = 0;
 
@@ -1427,7 +1471,6 @@ void ZSocket::procLoop(int timeoutSeconds)
             if (readsocks < 0) plog("select error: data failed to be received!\n");
             else if (readsocks == 0)
             { 
-                procSelfData();
                 static int i = 0; 
                 static int c = 10000000/timeout.tv_usec;
                 if (i > c ){ plog(".");     fflush(stdout); i = -1;}

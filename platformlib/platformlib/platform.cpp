@@ -101,7 +101,7 @@ PLAT_INT32 CAppInterface::AppInit()
     CUtility::initBigPackIdx(send);
     CUtility::initBigPackIdx(recv);
     CUtility::initBigPackIdx(platBuf);
-    CUtility::initBigPackIdx(m_dbBuf);
+    //CUtility::initBigPackIdx(m_dbBuf);
 
     std::string strDbvalue = "";
     std::string strAgentServer = "";
@@ -152,7 +152,7 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
     CUtility::initBigPackIdx(send);
     CUtility::initBigPackIdx(recv);
     CUtility::initBigPackIdx(platBuf);
-    CUtility::initBigPackIdx(m_dbBuf);
+    //CUtility::initBigPackIdx(m_dbBuf);
 
     std::string strDbvalue = "";
     std::string strAgentServer = "";
@@ -219,7 +219,7 @@ PLAT_INT32 CAppInterface::AppWrite()
     }
 
     //debug client to platform data
-    plog("Write data: write Addr: %0x\n",send );
+    plog("\nWrite data in little endian: write Addr: %0x\n",send );
     outputPackage(send);
 
 
@@ -275,6 +275,8 @@ PLAT_INT32 CAppInterface::AppWrite()
              // fprintf(m_fpFromTerminalLog, "Message atp to ato\n");
               plog("Message atp to ato\n");
               PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
+              if (CUtility::needSwap())
+                  CUtility::littlePackToBE(uintBuf);
               m_pRedis->app_rpush(did, uintBuf);
              
               continue;
@@ -284,6 +286,8 @@ PLAT_INT32 CAppInterface::AppWrite()
             {
               plog("Message ato to atp\n");
               PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
+              if (CUtility::needSwap())
+                  CUtility::littlePackToBE(uintBuf);
               m_pRedis->app_rpush(did, uintBuf);
              
               continue;
@@ -307,6 +311,10 @@ PLAT_INT32 CAppInterface::AppWrite()
                 {
                     char ctrl[IDSIZE+5] = "\0";
                     sprintf(ctrl, "%satoioctl", dst);
+                    if(CUtility::needSwap())
+                    {
+                        CUtility::littlePackToBE(pctrlBuf);
+                    }
                     m_pRedis->app_set(ctrl, pctrlBuf);
 
                     pbk = pctrlBuf ;
@@ -368,14 +376,16 @@ PLAT_INT32 CAppInterface::AppWrite()
                 if (did >= 10000 && did < 100000) 
                 {
                     plog("This message send to CBI, just push it\n");
+                    m_pRedis->app_rpush(dstID, uintBuf); 
                 }
                 else
                 {
-                    if ( m_bUseP1 )
-                         m_pRedis->app_rpush(selfIDkey, uintBuf);
-                         //m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                    if ( m_bUseP1 ) //m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                        m_pRedis->app_rpush(selfIDkey, uintBuf);
+                    else
+                        m_pRedis->app_rpush(dstID, uintBuf); 
                 }
-                m_pRedis->app_rpush(dstID, uintBuf);   
+                  
                 continue;
             }
             break;
@@ -386,11 +396,11 @@ PLAT_INT32 CAppInterface::AppWrite()
                 // connect / disconnet did, and recode result into platform buffer
                 // procConnectControl(uintBuf); 
                 if ( m_bUseP1 ) 
-                  m_pRedis->app_rpush(selfIDkey, uintBuf);
-                
-               
-                
-                
+                {
+                    if (CUtility::needSwap())
+                        CUtility::littlePackToBE(uintBuf);
+                    m_pRedis->app_rpush(selfIDkey, uintBuf);
+                }
                 continue;
             }
             case 0xC://1100; Event record data
@@ -428,6 +438,10 @@ PLAT_INT32 CAppInterface::AppWrite()
                  //If destination is train simulation RS, then it is ATO, pull 
                 // contrl command, using app_set function    
                 sprintf(ctrl, "%sauctl", dst);
+                if(CUtility::needSwap())
+                {
+                    CUtility::littlePackToBE(uintBuf);
+                }
                 m_pRedis->app_set(ctrl, uintBuf);
                 continue;
             }
@@ -441,40 +455,39 @@ PLAT_INT32 CAppInterface::AppWrite()
             break;
          }
 
-         //other type message
-        if (CUtility::needSwap())
-        {
-            //little to big endian for output to db
-            CUtility::littlePackToBE(uintBuf);
-        }
-        
-        
         //If destination terminal is CC, Now push little package into ATP and 
         // ATO respectively
         if ( CUtility::isCCID(dstID))
         {
-            plog("This is destination is CC\n");
-            //ATP
-            m_pRedis->app_rpush( (dstID & 0x1fffffff) | 0x60000000, uintBuf);//atp
-            m_pRedis->app_rpush( (dstID & 0x1fffffff) | 0x40000000,uintBuf);//ato
-                   
-            //dstID =(dstID&0x1000000F)|0x60000000;       
-            //m_pRedis->app_rpush(dstID, uintBuf);
-
-            //ATO
-            //dstID =(dstID&0x1000000F)|0x40000000; 
-            //m_pRedis->app_rpush(dstID, uintBuf); 
+            plog("This is destination is CC srcID = %08x datatype = %d\n", m_srcID,datatype);
+            plog("Warning: It is unnormal! If destination is CC, message only can from ZC or TOD"
+                  "And data type is communication message.\n");
+            //m_pRedis->app_rpush( CUtility::getAtpIDFromCC(dstID), uintBuf);//atp
+            //m_pRedis->app_rpush( CUtility::getAtoIDFromCC(dstID), uintBuf);//ato
         }
         else
         {
+             //other type message
+            if (CUtility::needSwap())
+            {
+                //little to big endian for output to db
+                CUtility::littlePackToBE(uintBuf);
+            }
             plog("Default proc for other type msg, just push it and transfer it\n");
-            plog("push to db key = %08x\n", dstID);
+            
             //push little package into correspond destination ID buffer in DB
-            m_pRedis->app_rpush(dstID, uintBuf); 
+            if ( m_bUseP1 )
+            {
+                plog("push to db selfIDkey = %s\n", selfIDkey);
+                m_pRedis->app_rpush(selfIDkey, uintBuf);
+            }
+            else
+            {
+                plog("push to db dstID = %08x\n", dstID);
+                m_pRedis->app_rpush(dstID, uintBuf); 
+            }
         }
-        if ( m_bUseP1 )
-             m_pRedis->app_rpush(selfIDkey, uintBuf);
-           //m_pSockClient->transferTerminal((const char*) uintBuf,len);    
+        
     }//end of for
  
     //restore write buffer data
@@ -490,35 +503,35 @@ PLAT_INT32 CAppInterface::AppWrite()
 void CAppInterface::procConnectState(PLAT_UBYTE* p)
 {
     return;
-    CLittlePack parser(m_srcID, p);
-    if (parser.isConnectState())
-    {
-        PLAT_UINT8 type = parser.getConnectState();
-        switch(type)
-        {
-            case 0x20:
-            plog("Connect is not established!\n");
-            break;
-            case 0x21:
-            plog("Connect is establishing ...\n");
-            break;
-            case 0x22:
-            plog("Connect is removing ...\n");
-            break;
-            case 0x23:
-            plog("Connect is runing normally\n");
-            break;
-            case 0x24:
-            plog("Connect is timeout!\n");
-            break;
-            case 0x25:
-            plog("Connect is failed!\n");
-            break;
-            default:
-            break;
-        }
-    //update connect state to platform buffer
-    }
+    //CLittlePack parser(m_srcID, p);
+    //if (parser.isConnectState())
+    //{
+    //    PLAT_UINT8 type = parser.getConnectState();
+    //    switch(type)
+    //    {
+    //        case 0x20:
+    //        plog("Connect is not established!\n");
+    //        break;
+    //        case 0x21:
+    //        plog("Connect is establishing ...\n");
+    //        break;
+    //        case 0x22:
+    //        plog("Connect is removing ...\n");
+    //        break;
+    //        case 0x23:
+    //        plog("Connect is runing normally\n");
+    //        break;
+    //        case 0x24:
+    //        plog("Connect is timeout!\n");
+    //        break;
+    //        case 0x25:
+    //        plog("Connect is failed!\n");
+    //        break;
+    //        default:
+    //        break;
+    //    }
+    ////update connect state to platform buffer
+    //}
 
 }
 
@@ -887,7 +900,6 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
         }
 
         memcpy(&uintBuf, p, len );
-
         char tmp[IDSIZE];
         sprintf(dst,"%08x",*it);
         m_pRedis->app_rpush(tmp, uintBuf);
@@ -899,8 +911,6 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
         char tmp2[32];
         sprintf(tmp2,"self%08x",*it);
         m_pRedis->app_rpush(tmp2, uintBuf);
-        
-            
      }
 }
 
@@ -923,7 +933,7 @@ PLAT_UINT32 CAppInterface::getPlatformID( PLAT_UINT32 srcid)
 PLAT_INT32 CAppInterface::AppRead()
 {
     CUtility::initBigPackIdx(recv);
-    plog("Now srcID = %08x start Read\n", m_srcID);
+    plog("\n\nNow srcID = %08x start Read\n", m_srcID);
 
     if (m_srcID == 0)
         return 0;
@@ -941,9 +951,8 @@ PLAT_INT32 CAppInterface::AppRead()
     int len = m_pRedis->app_llen(src);
     for(int j =0;j <len;j++)
     {
-         memset(&uintBuf, 0x00, SIZE);
-         m_pRedis->app_lpop(m_srcID, uintBuf);
-
+        memset(&uintBuf, 0x00, SIZE);
+        m_pRedis->app_lpop(m_srcID, uintBuf);
         if(CUtility::needSwap())
         {
             //big endian to little endian for little package
@@ -966,12 +975,17 @@ PLAT_INT32 CAppInterface::AppRead()
 
     //------------------------------
     //get db data that is through app_set  in db, now get it.
-    CUtility::initBigPackIdx(m_dbBuf);
-    m_pRedis->app_get("linkstate", m_dbBuf);//Maybe m_dbBuf can not through db channel.
-    unitCounts = CUtility::getUnitCounts(m_dbBuf);
+    //Through DB beacuase ATO and ATP want get same resutl from different termainal.
+    unsigned char dbBuf[SIZE] = "\0";
+    m_pRedis->app_get("linkstate", dbBuf);
+    if(CUtility::needSwap())
+    {
+        CUtility::bigPackToLE(dbBuf);
+    }
+    unitCounts = CUtility::getUnitCounts(dbBuf);
     for (unsigned int idx = 0; idx < unitCounts; idx++)
     {
-        PLAT_UBYTE * p = CUtility::getUnitHead(m_dbBuf, idx);
+        PLAT_UBYTE * p = CUtility::getUnitHead(dbBuf, idx);
         plog ("link state %08x to %08x is %x\n", CUtility::getLinkStateSID(p),
             CUtility::getLinkStateDID(p),CUtility::getLinkStateResult(p));
         CUtility::pushBackPack(recv, p);
@@ -991,6 +1005,10 @@ PLAT_INT32 CAppInterface::AppRead()
         sprintf(ctrl, "%stoatp", ctrl);  
         //得到RS发送给ATP的包含三块IO板输出数据和速度脉冲包数据信息
         m_pRedis->app_get (ctrl, RstoATPbuf);
+        if(CUtility::needSwap())
+        {
+            CUtility::littlePackToLE(RstoATPbuf);
+        }
 
         //得到第一块IO板输出数据，包含unithead头
         memcpy(tempBuf, RstoATPbuf, 10);                        
@@ -1025,7 +1043,10 @@ PLAT_INT32 CAppInterface::AppRead()
         //得到RS发送-%0x给ATO的包含速度脉冲包数据信息
         plog("get %s - %0x\n", ctrl, m_srcID);
         m_pRedis->app_get (ctrl, RstoATObuf);
-
+        if(CUtility::needSwap())
+        {
+            CUtility::littlePackToLE(RstoATObuf);
+        }
         //得到RS的速度脉冲包输出数据，包含unithead头，42为包的长度
         memcpy(tempBuf, RstoATObuf, 202);                 
         CUtility::pushBackPack(recv, tempBuf);
@@ -1035,7 +1056,7 @@ PLAT_INT32 CAppInterface::AppRead()
    }
 
     //debug
-    plog("Read data Finished: read Addr: %0x\n", recv);
+    plog("Read data Finished in little endian: read Addr: %0x\n", recv);
     outputPackage(recv);
 
     if(CUtility::needSwap())
@@ -1049,20 +1070,20 @@ PLAT_INT32 CAppInterface::AppRead()
 
 PLAT_INT32 CAppInterface::AppWrite(char *dst)
 {
-    memset(uintBuf,'a',100);
-    m_pRedis->app_rpush(dst, uintBuf);                                           
+//   memset(uintBuf,'a',100);
+//    m_pRedis->app_rpush(dst, uintBuf);                                          
     return 0;
 }
 
 PLAT_INT32 CAppInterface::AppRead(char *src)
 {
-    int i;
-    m_pRedis->app_lpop(src, uintBuf);
-    for(i =0;i <SIZE;i++)
-    {
-        plog(" %u",uintBuf[i]);
-    }
-    plog("\n",uintBuf[i]);
+    //int i;
+    //m_pRedis->app_lpop(src, uintBuf);
+    //for(i =0;i <SIZE;i++)
+    //{
+    //    plog(" %u",uintBuf[i]);
+    //}
+    //plog("\n",uintBuf[i]);
     return 0;
 }
 

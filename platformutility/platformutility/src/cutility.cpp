@@ -130,6 +130,9 @@ void  CUtility::swapLittlePackage(PLAT_UBYTE * littlepack,bool isBigEndianP)
     if (hasMsgHead(littlepack))
         swapUnitMsgHead(littlepack);
 
+    else if ( isLinkMsg(littlepack) )
+        swapLinkMsg(littlepack);
+
     if (!isBigEndianP)
         swapUnitHead(littlepack);
 }
@@ -144,6 +147,21 @@ void CUtility:: swapUnitHead(PLAT_UBYTE * littlepack)
     dst.unitSize = ByteSwap32(src.unitSize);
 
     memcpy(littlepack, &dst, sizeof(T_UNIT_HEAD));
+}
+
+void CUtility::swapLinkMsg(PLAT_UBYTE * littlepack)
+{
+    tConStateData src,dst;
+    memcpy(&src, littlepack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD), 
+                     sizeof(tConStateData));
+    memcpy(&dst, &src, sizeof(tConStateData));
+
+    dst.sid = ByteSwap32(src.sid) ;
+    dst.did = ByteSwap32(src.did) ;
+    dst.msgype = ByteSwap32(src.msgype) ;
+    dst.msglen = ByteSwap32(src.msglen) ;
+   
+    memcpy(littlepack + sizeof(PLAT_BYTE) * sizeof(T_UNIT_HEAD), &dst, sizeof(tConStateData));
 }
 
 void CUtility:: swapUnitMsgHead(PLAT_UBYTE * littlepack)
@@ -343,6 +361,7 @@ PLAT_UINT32 CUtility::getLittlePackDataInfo(const PLAT_UBYTE * littlepack)
 
 // littlepack is little endian
 // Only communication msg out has msg head
+// isCommunicationMsg
 bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
 {
    bool ret = false;
@@ -350,18 +369,31 @@ bool CUtility::hasMsgHead(const PLAT_UBYTE * littlepack)
 
     switch(dtype)
     {
-        case 6://000110 link state data
-        case 0xb://001011 link control data
-        {
-            ret = false;
-        }
-        break;
        case 0xa://001010 communication msg out
-       case 5://000101 communication msg in
+       case 0x5://000101 communication msg in
             ret = true;
         break;
         default:
             break;
+    }
+   return ret;
+}
+
+bool CUtility::isLinkMsg(const PLAT_UBYTE * littlepack)
+{
+   bool ret = false;
+   PLAT_UINT32 dtype = getLittlePackDataType(littlepack);
+
+    switch(dtype)
+    {
+        case 0x6://000110 link state data
+        case 0xb://001011 link control data
+        {
+            ret = true;
+        }
+        break;
+        default:
+         break;
     }
    return ret;
 }
@@ -854,43 +886,43 @@ bool CLittlePack::isInputAppStatus() const
 }
 
 // get content of NO.$byteidx, start from 0
-PLAT_UINT8 CLittlePack::getByteData(int byteidx)
-{
-	PLAT_UINT8 val;
-    if ( CUtility::hasMsgHead(m_pHeader) )
-    {
-	    memcpy(&val, m_pData + byteidx * sizeof(PLAT_UINT8) + sizeof(T_MESSAGE_HEAD),
-            sizeof(PLAT_UINT8));
-    }
-    else
-    {
-      memcpy(&val, m_pData + byteidx * sizeof(PLAT_UINT8), 
-          sizeof(PLAT_UINT8));
-    }
-        return val & 0xFF;
-}
+//PLAT_UINT8 CLittlePack::getByteData(int byteidx)
+//{
+//	PLAT_UINT8 val;
+//    if ( CUtility::hasMsgHead(m_pHeader) )
+//    {
+//	    memcpy(&val, m_pData + byteidx * sizeof(PLAT_UINT8) + sizeof(T_MESSAGE_HEAD),
+//            sizeof(PLAT_UINT8));
+//    }
+//    else
+//    {
+//      memcpy(&val, m_pData + byteidx * sizeof(PLAT_UINT8), 
+//          sizeof(PLAT_UINT8));
+//    }
+//        return val & 0xFF;
+//}
 
-void CLittlePack::setByteData(int byteidx, PLAT_UINT8 val)
-{
-    PLAT_UINT8 tmp = val;
-    memcpy(m_pData + byteidx * sizeof(PLAT_UINT8) + sizeof(T_MESSAGE_HEAD), &tmp, sizeof(PLAT_UINT8));
-}
+//void CLittlePack::setByteData(int byteidx, PLAT_UINT8 val)
+//{
+//    PLAT_UINT8 tmp = val;
+//    memcpy(m_pData + byteidx * sizeof(PLAT_UINT8) + sizeof(T_MESSAGE_HEAD), &tmp, sizeof(PLAT_UINT8));
+//}
 
 // get byte 0 data
-PLAT_UINT8 CLittlePack::getConnectState()
-{
-    return getByteData(0);
-}
-
-void CLittlePack::setConnectState(PLAT_UINT8 val)
-{
-    setByteData(0, val);
-}
-
-PLAT_UINT8 CLittlePack::getConnectControl()
-{
-    return getByteData(0);
-}
+//PLAT_UINT8 CLittlePack::getConnectState()
+//{
+//    return getByteData(0);
+//}
+//
+//void CLittlePack::setConnectState(PLAT_UINT8 val)
+//{
+//    setByteData(0, val);
+//}
+//
+//PLAT_UINT8 CLittlePack::getConnectControl()
+//{
+//    return getByteData(0);
+//}
 
 
 PLAT_UINT32 CLittlePack::ATO_GetDestID() const/*得到ATO发送数据包中各单元的目的地ID*/
