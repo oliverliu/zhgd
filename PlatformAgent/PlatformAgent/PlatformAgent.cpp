@@ -5,7 +5,7 @@
 
 //#include "zredis.h"
 #include "zsocket.h"
-
+#include "INIReader.h"
 
 
 void invokeProc()
@@ -17,12 +17,23 @@ void invokeProc()
 int main (int argc, char **argv)
 {
     int i =0 ;
-    printf("afasdfas\n");
+    printf("Start Agent Run...\n");
     invokeProc();
+
+    INIReader reader("sid.config");
+    if (reader.ParseError() < 0) {
+        printf( "Can't load 'sid.config'\n");
+        return -1;
+    }
+    std::string strlog = reader.Get("self","agentlog","");
 
     ZSocket server;
     //server.setLog("agent_server.log");
-    server.setLog();  
+    if (strlog.length()  != 0)
+    {
+        server.setLog(strlog.c_str());
+        printf("Com board log is saved into file %s\n", strlog.c_str());
+    }
     
     bool bdb = server.connectDb(); 
     

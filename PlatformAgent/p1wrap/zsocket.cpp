@@ -1011,7 +1011,7 @@ int ZSocket::procTransferCtrl(const char * buffer)
 
     plog("Recevied data from self terminal ");
     s_packinfo pack;
-    getPackinfo(pack,(char*)buffer);
+    getPackinfo(pack,(unsigned char*)buffer);
 
     //pop form db and send out
     char popOutBuf[SIZE] = "\0";
@@ -1160,14 +1160,10 @@ void ZSocket::initConnectState(const char*  _ppack, const unsigned int did,
     }
 }
 
-void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
+//the _buffer is little endian sequence
+void ZSocket::getPackinfo(s_packinfo& packinfo, unsigned char* _buffer)
 {
     unsigned char* buffer = (unsigned char*)_buffer;
-
-    if( CUtility::needSwap())
-    {
-        CUtility::littlePackToLE(buffer);
-    }
 
     //print out little package info
     outputLittlepack((const unsigned char*)buffer);
@@ -1177,11 +1173,6 @@ void ZSocket::getPackinfo(s_packinfo& packinfo, char* _buffer)
     packinfo.did = CUtility::getLittlePackDID(buffer);
     packinfo.size = CUtility::getLittlePackSize(buffer);
         
-    //restore it.
-    if( CUtility::needSwap())
-    {
-        CUtility::littlePackToBE(buffer);
-    }
     plog("Little pack info in socket: datatype=%0x (16), sid= 0x%0x, did=0x%0x, size = %d\n",
          packinfo.datatype, packinfo.sid,packinfo.did,packinfo.size);
 }
@@ -1204,8 +1195,8 @@ void ZSocket::updateConnectResult(int listnum, int result)
 void ZSocket::dealWithData(     int listnum     )
 {
     //char self[] = "selftransfer";
-    char buffer[SIZE + 12 + 1];    //12 is "selftransfer" length
-    memset(buffer, 0,SIZE+5);
+    PLAT_UBYTE buffer[SIZE];    //12 is "selftransfer" length
+    memset(buffer, 0,SIZE);
     char *cur_char;      /* Used in processing buffer */
 
     int sockId = m_connectionList[listnum];
@@ -1227,27 +1218,37 @@ void ZSocket::dealWithData(     int listnum     )
     {
         plog("Recv data lengh %d\n",recvlen );
         //get content
-       if (isFromSelf(buffer)) //transfer them to other terminal
-       {
-          
-       }
-       else //from other terminal to me. push back
-       {
-           plog("Message from other: true, just push it\n");
-           s_packinfo pack;
-           getPackinfo(pack,buffer);
+       
+       //from other terminal to me. push back
+       
+        plog("Message from other: true, just push it\n");
+        if (CUtility::needSwap())
+        {
+            CUtility::littlePackToLE(buffer);
+        }
+           
+        s_packinfo pack;
+        getPackinfo(pack,buffer);
 
-            //the data is from other terminals, push it to db
-           if ( CUtility::isCCID(pack.did))
-           {
-               plog("Message from other to CC terminal\n");
+        //restore it for save into db
+        if (CUtility::needSwap())
+        {
+            CUtility::littlePackToBE(buffer);
+        }
+
+        //the data is from other terminals, push it to db
+        if ( CUtility::isCCID(pack.did))
+        {
+            plog("Message from other to CC terminal\n");
               
-               m_pRedis->app_rpush( CUtility::getAtpIDFromCC(pack.did ) , (const unsigned char*) buffer);//atp
-               m_pRedis->app_rpush( CUtility::getAtoIDFromCC(pack.did ), (const unsigned char*) buffer);//ato
-           }
-           else
-              m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
-       }
+            m_pRedis->app_rpush( CUtility::getAtpIDFromCC(pack.did ) ,
+                                (const unsigned char*) buffer);//atp
+            m_pRedis->app_rpush( CUtility::getAtoIDFromCC(pack.did ),
+                                (const unsigned char*) buffer);//ato
+        }
+        else
+            m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
+       
   }//safeSocket_recv else end
 }
 
@@ -1463,7 +1464,7 @@ void ZSocket::setLog(const char* file)
     if ( file != NULL && m_strfileLog.length() == 0)
     {
         m_strfileLog = std::string(file);
-        FILE *  fd = fopen (file, "w"); 
+        FILE *  fd = fopen (file, "w+"); 
         fclose(fd);
     }
 }

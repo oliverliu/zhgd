@@ -103,7 +103,8 @@ private:
     void initIDIP();
     // the msg send by host client,such as connect, disconnect or transfer
     bool isFromSelf(const char * buffer);
-    void getPackinfo(struct _packinfo& packinfo, char* buffer);
+    // The parameter buffer is little endian sequence
+    void getPackinfo(struct _packinfo& packinfo, unsigned char* buffer);
 
      bool addConnection (long longip,int sockid);
      bool delConnection(long long_address);	 
