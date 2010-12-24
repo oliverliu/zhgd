@@ -236,29 +236,32 @@ int ZSocket::connectTerminal(unsigned int did,int port,int timeout_nouse)
         return -1;
     }
 
+    //debug network
      //safeSocket_getSockopt(int safeSock, int level, int optname, void* optval, socklen_t *optlen);
     //int d = 0;
     //int optval = 0;
     //safeSocket_getSockopt(sockid,SOL_SAFESOCKET,SS_LINK_STATUS, (void*) &optval, &d);
     //plog("---------- safeSocket_getSockopt optval = %d, optlen = %d\n", optval, d);
 
-    plog("Set connect result is FAILED for temporarily, the value will be "
-           "changed when Except_set is set later.\n");
-    PLAT_UBYTE pack[1024] = "\0" ;
-    initPackage(pack,did, 0,0);
-    updateDbBuffer(pack);
-    //CUtility::pushBackPack(m_dbBuf, pack);
+///////////////////////////////////////////
+    //Now we do not do anthing about create connect for linkstate
+    //plog("Set connect result is FAILED for temporarily, the value will be "
+    //       "changed when Except_set is set later.\n");
+    //PLAT_UBYTE pack[1024] = "\0" ;
+    //initPackage(pack,did, 0,0);
+    //updateDbBuffer(pack);
+    ////CUtility::pushBackPack(m_dbBuf, pack);
 
-    plog("Write to DB value is in little endian\n");
-    outputLittlepack(pack);
+    //plog("Write to DB value is in little endian\n");
+    //outputLittlepack(pack);
 
-    unsigned char dbBuf[NETSIZE] = "\0";
-    memcpy(dbBuf, m_dbBuf, NETSIZE);
-    if (CUtility::needSwap())
-    {
-        CUtility::bigPackToBE(dbBuf);
-    }
-    m_pRedis->app_set("linkstate", dbBuf);
+    //unsigned char dbBuf[NETSIZE] = "\0";
+    //memcpy(dbBuf, m_dbBuf, NETSIZE);
+    //if (CUtility::needSwap())
+    //{
+    //    CUtility::bigPackToBE(dbBuf);
+    //}
+    //m_pRedis->app_set("linkstate", dbBuf);
 
     return ret;
 }
@@ -408,7 +411,7 @@ int ZSocket::disconnectTerminal(int did)
     initPackage(pack,did, 1,1);
     updateDbBuffer(pack);
     
-    plog("Update data info in DB for conect with %s.\n", value.c_str());
+    plog("Update data info in DB for conect with %s for delete connection.\n", value.c_str());
     unsigned char dbBuf[NETSIZE] = "\0";
     memcpy(dbBuf, m_dbBuf, NETSIZE);
     if (CUtility::needSwap())
@@ -1214,7 +1217,8 @@ void ZSocket::updateConnectResult(int listnum, int result)
     initPackage(pack,dstID, 0,result);//default 1, successful
     updateDbBuffer(pack);
     
-    plog("link state will be update to key linkstate in DB, its content is:\n");
+    plog("link state connect succesful will be update to key linkstate in DB,"
+        "its content is:\n");
     outputLittlepack(pack);
 
     unsigned char dbBuf[NETSIZE] = "\0";
