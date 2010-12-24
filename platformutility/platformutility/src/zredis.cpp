@@ -132,7 +132,7 @@ int ZRedis::app_lpop(const char *key, PLAT_UINT8* outbuf)
     credis_lpop(m_pRedis,key,&val);
     if(val != NULL)
     {
-        strncpy(m_charBuf,val,SIZE*2);
+        strncpy(m_charBuf,val,SIZE_L_MAX*2);
         db2app(m_charBuf,outbuf);
         return 1;
     }
@@ -194,17 +194,17 @@ void ZRedis::app2db(const PLAT_UINT8* appdata, char* dbbuf)
 {
     int i;
     memset(dbbuf,'\0',CHARSIZE);
-    for(i = 0;i < SIZE;i ++)
+    for(i = 0;i < SIZE_L_MAX;i ++)
     {
             if(appdata[i] == 0)
             {
                     dbbuf[i] = 1;
-                    dbbuf[i+SIZE] = 1;
+                    dbbuf[i+SIZE_L_MAX] = 1;
             }
             else
             {
-        dbbuf[i] = 2; //could not use 0, because string end of 0
-                    dbbuf[i+SIZE] = appdata[i];
+                    dbbuf[i] = 2; //could not use 0, because string end of 0
+                    dbbuf[i+SIZE_L_MAX] = appdata[i];
             }
     }
     return;
@@ -215,7 +215,7 @@ void ZRedis::db2app(const char* dbbuf, PLAT_UINT8* appdata)
 {
     PLAT_UINT8 u;
 
-    for(int i = 0;i < SIZE;i ++)
+    for(int i = 0;i < SIZE_L_MAX;i ++)
     {
             u = (PLAT_UINT8) dbbuf[i];
             if(u == 1)
@@ -224,7 +224,7 @@ void ZRedis::db2app(const char* dbbuf, PLAT_UINT8* appdata)
             }
             else
             {
-                    appdata[i] = (PLAT_UINT8)dbbuf[i+SIZE];
+                    appdata[i] = (PLAT_UINT8)dbbuf[i+SIZE_L_MAX];
             }
     }
 }

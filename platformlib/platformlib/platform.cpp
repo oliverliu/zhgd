@@ -94,8 +94,8 @@ PLAT_INT32 CAppInterface::AppInit()
     send = APP_WRITE_ADDR;
     recv = APP_READ_ADDR;
 
-    memset(send, 0, SIZE);
-    memset(recv, 0, SIZE);
+    memset(send, 0, NETSIZE);
+    memset(recv, 0, NETSIZE);
     memset(src, 0, IDSIZE);
 
     CUtility::initBigPackIdx(send);
@@ -145,8 +145,8 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
     send = s;
     recv = r;
 
-    memset(send, 0, SIZE);
-    memset(recv, 0, SIZE);
+    memset(send, 0, NETSIZE);
+    memset(recv, 0, NETSIZE);
     memset(src, 0, IDSIZE);
 
     CUtility::initBigPackIdx(send);
@@ -296,18 +296,18 @@ PLAT_INT32 CAppInterface::AppWrite()
             case 0x9://1001; output board data
             {
                 static int count = 0;
-                static PLAT_UINT8 pctrlBuf[SIZE] = "\0";
+                static PLAT_UINT8 pctrlBuf[SIZE_L_MAX] = "\0";
                 static PLAT_UINT8* pbk = pctrlBuf;
                 
                 plog("Message output board data, this is No.%d\n",count+1);
                 memcpy(pbk, uintBuf, sizeof(uintBuf));
                 pbk += sizeof(uintBuf);
 
-                if (count < 3)
-                {
-                    count++;
-                }
-                else //count == 3
+                //if (count < 3)
+                //{
+                //    count++;
+                //}
+                //else //count == 3
                 {
                     char ctrl[IDSIZE+5] = "\0";
                     sprintf(ctrl, "%satoioctl", dst);
@@ -318,7 +318,7 @@ PLAT_INT32 CAppInterface::AppWrite()
                     m_pRedis->app_set(ctrl, pctrlBuf);
 
                     pbk = pctrlBuf ;
-                    memset(pctrlBuf, 0, SIZE);
+                    memset(pctrlBuf, 0, SIZE_L_MAX);
                     count = 0;
                 }
 
@@ -889,7 +889,7 @@ void CAppInterface::procBroadMsg(PLAT_UBYTE* p)
     for( it = dstIDlist.begin(); it != dstIDlist.end(); ++it )
     {
         //push to db
-        memset(&uintBuf, 0x00, SIZE);
+        memset(&uintBuf, 0x00, SIZE_L_MAX);
 
         PLAT_UINT32 len = CUtility::getLittlePackSize(p);
         PLAT_UINT32 did = CUtility::getLittlePackDID(p); //should equal to ffff
@@ -951,7 +951,7 @@ PLAT_INT32 CAppInterface::AppRead()
     int len = m_pRedis->app_llen(src);
     for(int j =0;j <len;j++)
     {
-        memset(&uintBuf, 0x00, SIZE);
+        memset(&uintBuf, 0x00, SIZE_L_MAX);
         m_pRedis->app_lpop(m_srcID, uintBuf);
         if(CUtility::needSwap())
         {
@@ -976,7 +976,7 @@ PLAT_INT32 CAppInterface::AppRead()
     //------------------------------
     //get db data that is through app_set  in db, now get it.
     //Through DB beacuase ATO and ATP want get same resutl from different termainal.
-    unsigned char dbBuf[SIZE] = "\0";
+    unsigned char dbBuf[NETSIZE] = "\0";
     m_pRedis->app_get("linkstate", dbBuf);
     if(CUtility::needSwap())
     {
@@ -996,8 +996,8 @@ PLAT_INT32 CAppInterface::AppRead()
    if((m_srcID & 0xE0000000)==0x60000000)           
    {
         plog ("Now is m_srcID & 0xE000000 == 0x60000000, This is atp\n");
-        PLAT_UINT8  RstoATPbuf[SIZE]  = "\0";
-        PLAT_UINT8  tempBuf[SIZE] = "\0";
+        PLAT_UINT8  RstoATPbuf[SIZE_L_MAX]  = "\0";
+        PLAT_UINT8  tempBuf[SIZE_L_MAX] = "\0";
         char ctrl[IDSIZE+5] = "\0";
 
         //SIMRS set the key's value
@@ -1030,9 +1030,9 @@ PLAT_INT32 CAppInterface::AppRead()
    else if((m_srcID&0xE0000000)==0x40000000)                      
    {
         plog ("Now is m_srcID & 0xE000000 == 0x40000000, this is ato\n");
-        PLAT_UINT8  RstoATObuf[SIZE] = "\0";
+        PLAT_UINT8  RstoATObuf[SIZE_L_MAX] = "\0";
         char ctrl[IDSIZE+5]  = "\0";
-        PLAT_UINT8  tempBuf[SIZE] = "\0";
+        PLAT_UINT8  tempBuf[SIZE_L_MAX] = "\0";
 
         //SIMRS set the key's value
         sprintf(ctrl, "%08xtoato", ((m_srcID&0x1FFFFFFF)|0x80000000));
@@ -1104,6 +1104,21 @@ void CAppInterface::plog(const char* format, ...)
     if (m_strfileLog.length() != 0)
     {
       fd = fopen (m_strfileLog.c_str(), "a+"); 
+
+      static int idx = 0;
+      fseek (fd, 0, SEEK_END);
+      int length = ftell (fd);
+      if (length >= 2000000) //max is 2M
+      {
+          fclose(fd);
+
+          idx ++;
+          char buffer [33] = "\0";
+          itoa (idx,buffer,10);
+          m_strfileLog = m_strfileLog + std::string(buffer) + std::string(".log");
+          fd = fopen (m_strfileLog.c_str(), "w+"); 
+      }
+
       bopen = true;
     }
 

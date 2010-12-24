@@ -22,9 +22,9 @@ typedef     unsigned long	        PLAT_UINT32;		/* long ,  unsigned */
 /*-----------------------------------------------------------------------------
 * 平台定义的各类长度值
 * ----------------------------------------------------------------------------*/ 
-#define SIZE				2048						/*数据包中一个单元的长度*/                         
-#define NETSIZE				SIZE*4						/*数据包的长度          */                       
-#define CHARSIZE			SIZE*2+1
+#define SIZE_L_MAX			2048						/*数据包中一个单元的长度*/                         
+#define NETSIZE				SIZE_L_MAX*4						/*数据包的长度          */                       
+#define CHARSIZE			SIZE_L_MAX*2+1
 #define IDSIZE				9							/*数据包ID的长度        */
  
 #define APP_DB_ADDR         0xc1000000					/*平台线路数据首地址	*/  

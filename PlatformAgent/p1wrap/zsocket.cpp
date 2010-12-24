@@ -252,8 +252,8 @@ int ZSocket::connectTerminal(unsigned int did,int port,int timeout_nouse)
     plog("Write to DB value is in little endian\n");
     outputLittlepack(pack);
 
-    unsigned char dbBuf[SIZE] = "\0";
-    memcpy(dbBuf, m_dbBuf, SIZE);
+    unsigned char dbBuf[NETSIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, NETSIZE);
     if (CUtility::needSwap())
     {
         CUtility::bigPackToBE(dbBuf);
@@ -409,8 +409,8 @@ int ZSocket::disconnectTerminal(int did)
     updateDbBuffer(pack);
     
     plog("Update data info in DB for conect with %s.\n", value.c_str());
-    unsigned char dbBuf[SIZE] = "\0";
-    memcpy(dbBuf, m_dbBuf, SIZE);
+    unsigned char dbBuf[NETSIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, NETSIZE);
     if (CUtility::needSwap())
     {
         CUtility::bigPackToBE(dbBuf);
@@ -866,22 +866,22 @@ int ZSocket::sendDisConnect(int sockid, const char* data, int size, int flag)
 int ZSocket::sendTransfer(int sockid,const char* data, int size, int flag)
 {
      return 0;
-/*
-    char buf[64+SIZE] = "\0";
-    static string strdst = "selftransfer";
 
-    memcpy(buf, strdst.c_str(), strdst.length());
-    memcpy(buf + strdst.length(), data, size);
+    //char buf[64+SIZE] = "\0";
+    //static string strdst = "selftransfer";
 
-    plog("Want to transfer %d data at original style selftransfer\n",  strdst.length() + size);
-    for(PLAT_UINT32 j = 0;j < size; j++)
-    {
-            plog("%02x  ", data[j]);
-    }
-    plog("\n");
+    //memcpy(buf, strdst.c_str(), strdst.length());
+    //memcpy(buf + strdst.length(), data, size);
 
-    return write(sockid, buf, strdst.length() + size, flag);
-    */
+    //plog("Want to transfer %d data at original style selftransfer\n",  strdst.length() + size);
+    //for(PLAT_UINT32 j = 0;j < size; j++)
+    //{
+    //        plog("%02x  ", data[j]);
+    //}
+    //plog("\n");
+
+    //return write(sockid, buf, strdst.length() + size, flag);
+    
 }
 
 //buffer content is "selfconnect#ID.."
@@ -1036,7 +1036,7 @@ int ZSocket::procTransferCtrl(unsigned char * buffer)
     getPackinfo(pack,(unsigned char*)buffer);
 
     //pop form db and send out
-    char popOutBuf[SIZE] = "\0";
+    char popOutBuf[SIZE_L_MAX] = "\0";
     if(1)
         //only just for pop it,
         //popOutBuf is not used for now
@@ -1217,8 +1217,8 @@ void ZSocket::updateConnectResult(int listnum, int result)
     plog("link state will be update to key linkstate in DB, its content is:\n");
     outputLittlepack(pack);
 
-    unsigned char dbBuf[SIZE] = "\0";
-    memcpy(dbBuf, m_dbBuf, SIZE);
+    unsigned char dbBuf[NETSIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, NETSIZE);
     if (CUtility::needSwap())
     {
         CUtility::bigPackToBE(dbBuf);
@@ -1230,14 +1230,13 @@ void ZSocket::updateConnectResult(int listnum, int result)
 void ZSocket::dealWithData(     int listnum     )
 {
     //char self[] = "selftransfer";
-    PLAT_UBYTE buffer[SIZE];    //12 is "selftransfer" length
-    memset(buffer, 0,SIZE);
+    PLAT_UBYTE buffer[SIZE_L_MAX] = "\0";    //12 is "selftransfer" length
     char *cur_char;      /* Used in processing buffer */
 
     int sockId = m_connectionList[listnum];
     
     int      flag = 0;
-    int      recvlen = read(sockId,buffer,SIZE+14,flag);
+    int      recvlen = read(sockId,buffer,SIZE_L_MAX,flag);
     if ( recvlen < 0) 
     {
         // Connection closed, close this end and free up entry in connectlist 
@@ -1342,7 +1341,7 @@ void ZSocket::procSelfDataInternal(const char* key)
     int len = m_pRedis->app_llen(key);
      for(int j =0;j <len;j++)
      {
-         PLAT_UBYTE unitBuf[SIZE] = "\0";
+         PLAT_UBYTE unitBuf[SIZE_L_MAX] = "\0";
          m_pRedis->app_lpop(key, unitBuf);
          if(CUtility::needSwap())
          {
@@ -1488,6 +1487,21 @@ void ZSocket::plog(const char* format, ...)
     if (m_strfileLog.length() != 0)
     {
       fd = fopen (m_strfileLog.c_str(), "a+"); 
+      
+      static int idx = 0;
+      fseek (fd, 0, SEEK_END);
+      int length = ftell (fd);
+      if (length >= 2000000) //max is 2M
+      {
+          fclose(fd);
+
+          idx ++;
+          char buffer [33] = "\0";
+          itoa (idx,buffer,10);
+          m_strfileLog = m_strfileLog + std::string(buffer) + std::string(".log");
+          fd = fopen (m_strfileLog.c_str(), "w+"); 
+      }
+
       bopen = true;
     }
 

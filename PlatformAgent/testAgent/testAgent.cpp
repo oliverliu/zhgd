@@ -74,6 +74,9 @@ int connect1025Server_1(int port,int seconds)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+    struct stat st;
+    stat("c:\\log.txt", &st);
+    int size = st.st_size;
     return 1;
  
     //ZSocketClient client;

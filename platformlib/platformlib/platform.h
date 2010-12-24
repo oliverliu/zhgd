@@ -84,8 +84,8 @@ protected:
 	char dst[IDSIZE];
 	char plat[IDSIZE];
 	//little package
-	PLAT_UINT8 uintBuf[SIZE];//save data from other terminal send me, the data from other termianl is big endian
-	PLAT_UINT8 platBuf[SIZE];//save data in platform, the data is liitle endian for internal use
+	PLAT_UINT8 uintBuf[SIZE_L_MAX];//save data from other terminal send me, the data from other termianl is big endian
+	PLAT_UINT8 platBuf[SIZE_L_MAX];//save data in platform, the data is liitle endian for internal use
     //save data in db, the data is little endian, that used for app_get/app_set
     //When wirte out linkstate, it will convert to big endian through temporary variable
     //PLAT_UINT8 m_dbBuf[SIZE];

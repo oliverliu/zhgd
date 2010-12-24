@@ -17,7 +17,8 @@
 #include "safeSocket.h"
 
 const int MAX_CNT_COUNT=1024;
-#define SIZE 2048
+#define SIZE_L_MAX          2048
+#define NETSIZE				SIZE_L_MAX*4
 
 typedef struct _packinfo
 {
@@ -141,7 +142,7 @@ private:
 
      //save data in db, the data is little endian, that used for app_get/app_set
     //When wirte out linkstate, it will convert to big endian through temporary variable
-    unsigned char m_dbBuf[SIZE];
+    unsigned char m_dbBuf[NETSIZE];
 
     int m_maxSetNums;
 };
