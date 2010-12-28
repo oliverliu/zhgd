@@ -373,10 +373,15 @@ PLAT_INT32 CAppInterface::AppWrite()
                     CUtility::littlePackToBE(uintBuf);
                 }
                 
-                if (did >= 10000 && did < 100000) 
+                if ( (did >= 10000 && did < 100000)  //CBI
+                    || did == 111 //ATS ID
+                    )
                 {
-                    plog("This message send to CBI, just push it\n");
-                    m_pRedis->app_rpush(dstID, uintBuf); 
+                    static char key[100] = "\0";
+                    sprintf(key, "%08xp2p",m_srcID); 
+                    
+                    plog("This message send to CBI, just push it, dstKey = %s\n",key);
+                    m_pRedis->app_rpush(key, uintBuf); 
                 }
                 else
                 {
@@ -1114,7 +1119,8 @@ void CAppInterface::plog(const char* format, ...)
 
           idx ++;
           char buffer [33] = "\0";
-          itoa (idx,buffer,10);
+          sprintf(buffer, "%d", idx);
+          //itoa (idx,buffer,10);
           m_strfileLog = m_strfileLog + std::string(buffer) + std::string(".log");
           fd = fopen (m_strfileLog.c_str(), "w+"); 
       }

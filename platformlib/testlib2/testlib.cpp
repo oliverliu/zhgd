@@ -136,7 +136,7 @@ void CPackUtility::pushCC2ZC_RoutineMsg()
 
 void CPackUtility::pushZC2CreateConnect(bool bcreate)
 {
-    const PLAT_UINT32 did = 0x20000001;
+    const PLAT_UINT32 did = 0xd3;
     const PLAT_UINT32 sid = 0x60000001;
 
     typedef struct _linkCtrl
@@ -185,7 +185,7 @@ void CPackUtility::pushAtp2ZC_linkdataOutput()
 	T_MESSAGE_HEAD  msghead;
 
     const PLAT_UINT32 sid = 0x60000001;
-    const PLAT_UINT32 did = 0x20000001;
+    const PLAT_UINT32 did = 0xd3;
 
 	//01 001010, 0xaa, 0x00,0x00
 	unithead.unitId = toBig32(0x4aaa0000);//zc uid
@@ -416,7 +416,7 @@ void CPackUtility::pushZC2CC_RoutinMsg()
 	PLAT_UBYTE *ptmpH = pArray;
 
     const PLAT_UINT32 did = 0xf0000001;//to ato
-    const PLAT_UINT32 sid = 0x20000001;
+    const PLAT_UINT32 sid = 0xd3;
 
 	T_UNIT_HEAD     unithead;
 	T_MESSAGE_HEAD  msghead;

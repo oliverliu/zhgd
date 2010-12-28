@@ -24,7 +24,7 @@ typedef enum
 
 #define ATS2   0x00000002        //ATS2的ID  
 
-#define ZC1    0x20000001        //ZC1的ID
+#define ZC1    211        //ZC1的ID
 
 #define ZC2    0x20000002        //ZC2的ID
 
