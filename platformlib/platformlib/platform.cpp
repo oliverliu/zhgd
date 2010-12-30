@@ -58,8 +58,6 @@ CAppInterface::CAppInterface()
     m_pRedis = new ZRedis();
     // m_pSockClient = new  ZSocketClient();
     //m_pSockClient->setLog("agent_client.log");
-
-    setLog("fromTerminalLog_liboutput.txt");
 }
 
 CAppInterface::~CAppInterface()
@@ -114,6 +112,17 @@ PLAT_INT32 CAppInterface::AppInit()
     strDbvalue = reader.Get("self","dbip","127.0.0.1");
      
     m_srcID = reader.GetInteger("self", "SID", 0);
+
+    m_bEnableLog = reader.GetInteger("self","enablelog",0) != 0 ? true : false;
+    if ( m_bEnableLog )
+    {
+       std::string logfile = reader.Get("self","liblog","");
+       if (logfile.length() != 0)
+       {
+           setLog(logfile.c_str());
+           printf("Platform lib log is saved into file %s\n", logfile.c_str());
+       }
+    }
 
     //default use p1
     m_bUseP1 = reader.GetInteger("self","usep1", 1) == 1 ? true : false;
@@ -363,8 +372,8 @@ PLAT_INT32 CAppInterface::AppWrite()
                 // for value its vaule from 5 to 10
                 procMsgOut(uintBuf);//need transfer it
 
-                plog("Want to transfer data ");
-                outputLittlepack((const unsigned char*)uintBuf);
+                //plog("Want to transfer data ");
+                //outputLittlepack((const unsigned char*)uintBuf);
                 PLAT_UINT did = CUtility::getLittlePackDID(uintBuf);
 
                 if (CUtility::needSwap())
@@ -386,9 +395,22 @@ PLAT_INT32 CAppInterface::AppWrite()
                 else
                 {
                     if ( m_bUseP1 ) //m_pSockClient->transferTerminal((const char*) uintBuf,len);
+                    {
+                        //for debug
+                        if ((did & 0xf0000000 == 0x6000000) 
+                            || (did & 0xf0000000 == 0x4000000)
+                             || (did & 0xf0000000 == 0xc000000)
+                            )
+                        {
+                            printf("Give CC message ---------------------------\n");
+                        }
+                        plog("Terminal want to transfer data to DID=%08x --------\n", did);
                         m_pRedis->app_rpush(selfIDkey, uintBuf);
+                    }
                     else
+                    {
                         m_pRedis->app_rpush(dstID, uintBuf); 
+                    }
                 }
                   
                 continue;
@@ -966,7 +988,7 @@ PLAT_INT32 CAppInterface::AppRead()
 
         CUtility::pushBackPack(recv, uintBuf);
     }
-    plog("Now db %s count = %d\n", src, len);
+    //plog("Now db %s count = %d\n", src, len);
 
     //------------------------------
     //get platform data for read
@@ -1104,6 +1126,9 @@ void CAppInterface::setLog(const char* file)
 
 void CAppInterface::plog(const char* format, ...)
 {
+    if ( !m_bEnableLog )
+        return;
+
     FILE *  fd = stdout;
     bool bopen = false;
     if (m_strfileLog.length() != 0)
@@ -1111,17 +1136,23 @@ void CAppInterface::plog(const char* format, ...)
       fd = fopen (m_strfileLog.c_str(), "a+"); 
 
       static int idx = 0;
+      static std::string prefix = "";
       fseek (fd, 0, SEEK_END);
       int length = ftell (fd);
       if (length >= 2000000) //max is 2M
       {
           fclose(fd);
 
+          if (idx == 0)
+          {
+              prefix = m_strfileLog.substr( 0, m_strfileLog.find(".log"));
+          }
+
           idx ++;
           char buffer [33] = "\0";
-          sprintf(buffer, "%d", idx);
+          sprintf(buffer, "%d.log", idx);
           //itoa (idx,buffer,10);
-          m_strfileLog = m_strfileLog + std::string(buffer) + std::string(".log");
+          m_strfileLog = prefix + std::string(buffer);
           fd = fopen (m_strfileLog.c_str(), "w+"); 
       }
 

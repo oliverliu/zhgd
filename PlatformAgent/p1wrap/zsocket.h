@@ -28,6 +28,13 @@ typedef struct _packinfo
     unsigned int size;
 }s_packinfo;
 
+typedef struct _linkInfo
+{
+    unsigned int did;
+    unsigned int sid;
+    std::string  ip;
+}s_linkInfo;
+
 class ZRedis;
 class ZSocket
 {
@@ -65,6 +72,7 @@ public:
 
     bool canWrite(int sockId,int microseconds = -1);
     bool canRead(int sockId, int microseconds = -1);
+    bool canWriteToDid(unsigned int did);
     //debug
     void setLog(const char* file = NULL);
  
@@ -113,14 +121,18 @@ private:
     bool isTransferCtrl(const char * buffer);
     bool isConnectCtrl(const char * buffer);
     bool isDisconnectCtrl(const char * buffer);
-    int procConnectCtrl(const char * buffer);
-    int procDisconnectCtrl(const char * buffer);
+    //int procConnectCtrl(const char * buffer);
+    //int procDisconnectCtrl(const char * buffer);
     int procTransferCtrl(unsigned char * buffer);
     void procSelfDataInternal(const char* key);
 
     void initConnectState(const char *  _ppack, const unsigned int  did, 
         const unsigned int  sid,int type, int connectvalue);
     bool needMonitor(int sockid);
+
+    void addMapLinkInfo(const int sockid, const unsigned int did,
+            const unsigned int sid, const std::string ip);
+    void delMapLinkInfo(const int sockid);
 private:
 
     bool m_bInit;
@@ -136,15 +148,19 @@ private:
 
     std::map<long, int> m_mapLongIP2SockId;
     
-    std::map<int,long> m_mapID2LongIP;
-    std::map<int,std::string> m_mapID2IP;
+    //std::map<int,long> m_mapID2LongIP;
+    //std::map<int,std::string> m_mapID2IP;
+
+    std::map<int,s_linkInfo> m_mapSockId2Info;
     ZRedis* m_pRedis;
 
      //save data in db, the data is little endian, that used for app_get/app_set
     //When wirte out linkstate, it will convert to big endian through temporary variable
     unsigned char m_dbBuf[NETSIZE];
+    bool m_bEnableLog;
 
     int m_maxSetNums;
+    unsigned int m_selfSID;
 };
 
 /*

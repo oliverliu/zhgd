@@ -76,9 +76,10 @@ long ZINIReader::GetIDFromIp(std::string section, std::string value, long defaul
                 const char* value =  key.substr (pos).c_str();
                 char* end;
                 // This parses "1234" (decimal) and also "0x4D2" (hex)
-                long n = strtol(value, &end, 0);
+                unsigned long int  n = strtoul(value, &end, 0);
                 ret =  end > value ? n : default_key;
-                break;
+                //break; //get first match
+                //now get last match
             }
         }
     }

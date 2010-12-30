@@ -96,6 +96,7 @@ protected:
     std::string m_strfileLog;
 
     bool    m_bUseP1;
+    bool    m_bEnableLog;
 //	fprintf(fp, "READ: \n");
 };
 #endif
