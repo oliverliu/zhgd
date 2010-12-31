@@ -697,6 +697,26 @@ void ZSocket::handleNewConnection()
         plog("Error: accept listenid=%d\n",m_idListen);
         return;
     }
+
+    //update linkstae
+    std::string ip = std::string(inet_ntoa(clientAddr.sin_addr));
+    PLAT_UINT did = getIDFromIP(ip);
+    addMapLinkInfo(connection, did,m_selfSID, ip);
+
+    PLAT_UBYTE pack[1024] = "\0" ;
+    initPackage(pack,did, 0,1);
+    updateDbBuffer(pack);
+    
+    plog("Update data info in DB for conect with %s for accept connection.\n", ip.c_str());
+    unsigned char dbBuf[NETSIZE] = "\0";
+    memcpy(dbBuf, m_dbBuf, NETSIZE);
+    if (CUtility::needSwap())
+    {
+        CUtility::bigPackToBE(dbBuf);
+    }
+    setLinkstate(dbBuf);
+    //end of update linkstate
+
         
     bool badd =  addConnection(clientAddr.sin_addr.s_addr, connection);
     if (!badd) 
@@ -781,25 +801,29 @@ bool ZSocket::canRead(int sockId,int microseconds )
 PLAT_UINT ZSocket::getIDFromIP(std::string ip)
 {
     //ip->DID
-    PLAT_UINT value = 0;
-    map<int,s_linkInfo>::iterator it = m_mapSockId2Info.begin();
-    for(; it != m_mapSockId2Info.end(); it++)
-    {
-        s_linkInfo st = it->second;
-        if (st.ip == ip)
-            value = st.did;
-    }
+    //PLAT_UINT value = 0;
+    //map<int,s_linkInfo>::iterator it = m_mapSockId2Info.begin();
+    //for(; it != m_mapSockId2Info.end(); it++)
+    //{
+    //    s_linkInfo st = it->second;
+    //    if (st.ip == ip)
+    //        value = st.did;
+    //}
 
     ////ip->DID
-    //ZINIReader reader("sid.config");
+    ZINIReader reader("sid.config");
 
-    //if (reader.ParseError() < 0) {
-    //    plog( "Can't load 'sid.config'\n");
-    //    return 0;
-    //}
-    //PLAT_UINT value = reader.GetIDFromIp( "ip",ip, 0);
-    //plog("Get IP from ID in configure file, id = %s, ip = %s\n", key, value.c_str());
+    if (reader.ParseError() < 0) {
+        plog( "Can't load 'sid.config'\n");
+        return 0;
+    }
+    PLAT_UINT value = reader.GetIDFromIp( "ip",ip, 0);
 
+    if ( CUtility::isCCType(value))
+    {
+        value = CUtility::getCCID(value);
+    }
+    plog("Get IP from ID in configure file, id = %08x, for ip = %s\n",value, ip );
     return value;
 }
 
