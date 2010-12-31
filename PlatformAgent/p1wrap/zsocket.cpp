@@ -471,7 +471,7 @@ int ZSocket::disconnectTerminal(int did)
     {
         CUtility::bigPackToBE(dbBuf);
     }
-    m_pRedis->app_set("linkstate", dbBuf);
+    setLinkstate(dbBuf);
 }
 
 //int ZSocket::getWriteSocket(const char *ip,int port,int timeout)
@@ -1300,7 +1300,24 @@ void ZSocket::updateConnectResult(int listnum, int result)
     {
         CUtility::bigPackToBE(dbBuf);
     }
-    m_pRedis->app_set("linkstate", dbBuf);
+
+    setLinkstate(dbBuf);
+    //m_pRedis->app_set("linkstate", dbBuf);
+}
+
+void ZSocket::setLinkstate(const unsigned char * dbBuf)
+{
+    static char key[100] = "\0";
+    sprintf(key, "%08xlinkstate",m_selfSID); 
+    //if ( CUtility::isCCID(m_selfSID) )
+    //{
+    //    sprintf(key, "%08xlinkstate",CUtility::getAtoIDFromCC(m_selfSID) ); 
+    //    m_pRedis->app_set(key, dbBuf);
+    //    sprintf(key, "%08xlinkstate",CUtility::getAtpIDFromCC(m_selfSID) ); 
+    //    m_pRedis->app_set(key, dbBuf);
+    //}
+    //else
+        m_pRedis->app_set(key, dbBuf);
 }
 
 // listnum: Current item in connectlist for for loops

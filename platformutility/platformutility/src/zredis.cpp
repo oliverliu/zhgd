@@ -139,6 +139,11 @@ int ZRedis::app_lpop(const char *key, PLAT_UINT8* outbuf)
     return 0;
 }
 
+int ZRedis::app_del(const char *key)
+{
+    return credis_del(m_pRedis, key);
+}
+
 int ZRedis::app_recv(char *key,PLAT_UINT8* outbuf)
 {
     //if(key == NULL) 

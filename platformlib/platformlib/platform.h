@@ -68,6 +68,7 @@ protected:
     void            plog(const char* format, ...);
     void            outputPackage(const PLAT_UBYTE * buf);
     void            outputLittlepack(const PLAT_UBYTE * buf);
+    void            getLatestMsg(const PLAT_UINT32 msgType, PLAT_UBYTE* uintBuf);
 
 
 protected:															

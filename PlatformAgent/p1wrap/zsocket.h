@@ -133,6 +133,7 @@ private:
     void addMapLinkInfo(const int sockid, const unsigned int did,
             const unsigned int sid, const std::string ip);
     void delMapLinkInfo(const int sockid);
+    void setLinkstate(const unsigned char* dbBuf);
 private:
 
     bool m_bInit;

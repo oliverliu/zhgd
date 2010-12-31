@@ -463,51 +463,68 @@ PLAT_UINT32 CUtility::getLittlePackSID(const PLAT_UBYTE * littlepack)
     return ret;
 }
 
+bool CUtility::isComMsg(const PLAT_UBYTE * littlepack)
+{
+    return hasMsgHead(littlepack);
+}
+
+PLAT_UINT32 CUtility::getMsgHeadMsgType(const PLAT_UBYTE * littlepack)
+{
+    PLAT_UINT32 ret = 0;
+    if (hasMsgHead(littlepack))//datatyep = 0x5 or 0xa
+    {
+        T_MESSAGE_HEAD messageHead;
+        memcpy(&messageHead, littlepack + sizeof(T_UNIT_HEAD), sizeof(T_MESSAGE_HEAD) );
+        ret = messageHead.msgType;
+    }
+    return ret;
+}
+
 PLAT_UINT32 CUtility::getLittlePackDID(const PLAT_UBYTE * littlepack)
 {
     PLAT_UINT32 ret = 0;
         
-    if ( hasMsgHead(littlepack))//datatyep = 0x5 or 0xa
+    if (hasMsgHead(littlepack))//datatyep = 0x5 or 0xa
     {
         T_MESSAGE_HEAD messageHead;
         memcpy(&messageHead, littlepack + sizeof(T_UNIT_HEAD), sizeof(T_MESSAGE_HEAD) );
         ret = messageHead.DID;
-        }
-        else
+    }
+    else
+    {
+            //get did from datatye and rules
+        //Rules: ATO1: 0x40000001, its correspond ATP1 ID is 0x60000001
+        //       ATO2: 0x40000002, its correspond ATP2 ID is 0x60000002
+        // The rules is ato/atp
+        PLAT_UINT32 datatype =  CUtility::getLittlePackDataType(littlepack);
+        PLAT_UINT32 srcId    =  CUtility::getLittlePackSID(littlepack);
+        switch (datatype)
         {
-                //get did from datatye and rules
-            //Rules: ATO1: 0x40000001, its correspond ATP1 ID is 0x60000001
-            //       ATO2: 0x40000002, its correspond ATP2 ID is 0x60000002
-            // The rules is ato/atp
-            PLAT_UINT32 datatype =  CUtility::getLittlePackDataType(littlepack);
-            PLAT_UINT32 srcId    =  CUtility::getLittlePackSID(littlepack);
-            switch (datatype)
-            {
-                    case 0x10: //analog output data
-                    case 0x11://TMS communication data
-                    case 0x9://output board data
-                        ret = srcId & 0xffffffff | 0x80000000;
-                    break;
+                case 0x10: //analog output data
+                case 0x11://TMS communication data
+                case 0x9://output board data
+                    ret = srcId & 0xffffffff | 0x80000000;
+                break;
 
-                    case 7://000111; atp 2 ato data; ato is 0x40000x
-                        ret = srcId & 0x0fffffff | 0x40000000;
-                    break;
+                case 7://000111; atp 2 ato data; ato is 0x40000x
+                    ret = srcId & 0x0fffffff | 0x40000000;
+                break;
 
-                    case 8: //001000; ato 2 atp data; atp is 0x6000000X
-                        ret = srcId & 0x0fffffff | 0x60000000;
-                    break;
+                case 8: //001000; ato 2 atp data; atp is 0x6000000X
+                    ret = srcId & 0x0fffffff | 0x60000000;
+                break;
 
-                    case 0xf:// 1111; program internal stata sync data
-                    case 0xc://1100;event record data
-                    //case 0xb://1011; connect control data
-                    case 0xe://1110; db control command
-                           ret = srcId & 0xffffffff | 0xc0000000;
-                    break;
+                case 0xf:// 1111; program internal stata sync data
+                case 0xc://1100;event record data
+                //case 0xb://1011; connect control data
+                case 0xe://1110; db control command
+                        ret = srcId & 0xffffffff | 0xc0000000;
+                break;
                     
-                    default:
-                    break;
-            }
+                default:
+                break;
         }
+    }
 
     return ret;
 }
@@ -547,9 +564,19 @@ void CUtility::updateBigPackIdx(PLAT_UBYTE* bigPackHead, const T_DATA_INDEX & id
     memcpy(bigPackHead,&idxData, sizeof(T_DATA_INDEX));
 }
 
+bool CUtility::isCCType(const PLAT_UINT32 id)
+{
+   return  ((id &0xF0000000) == 0x60000000 || (id &0xF0000000) == 0x40000000 ) ? true : false;
+}
+
 bool CUtility::isCCID(const PLAT_UINT32 id)
 {
    return   (id &0xF0000000) == 0xf0000000 ? true : false;
+}
+
+PLAT_UINT32 CUtility::getCCID(const PLAT_UINT32 id)
+{
+  return  (id & 0x0fffffff) | 0xf0000000;
 }
 
 PLAT_UINT32 CUtility::getAtpIDFromCC(const PLAT_UINT32 ccid)

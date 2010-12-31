@@ -957,6 +957,15 @@ PLAT_UINT32 CAppInterface::getPlatformID( PLAT_UINT32 srcid)
 //      return srcID;
 //}
 
+void CAppInterface::getLatestMsg(const PLAT_UINT32 msgType, PLAT_UBYTE* uintBuf)
+{
+    char key[64] = "\0";
+    sprintf(key,"%08xlatest%08x", m_srcID, msgType);
+    m_pRedis->app_get(key, uintBuf);
+    
+    m_pRedis->app_del(key);
+}
+
 PLAT_INT32 CAppInterface::AppRead()
 {
     CUtility::initBigPackIdx(recv);
@@ -975,19 +984,43 @@ PLAT_INT32 CAppInterface::AppRead()
         PlatformSleep(10);                         
     }
     
+    static bool bfirst = true;
     int len = m_pRedis->app_llen(src);
     for(int j =0;j <len;j++)
     {
-        memset(&uintBuf, 0x00, SIZE_L_MAX);
+        memset(uintBuf, 0x00, SIZE_L_MAX);
         m_pRedis->app_lpop(m_srcID, uintBuf);
         if(CUtility::needSwap())
         {
             //big endian to little endian for little package
             CUtility::littlePackToLE(uintBuf);
         }
+ 
+        if ( bfirst && CUtility::isComMsg(uintBuf))
+        {
+            //Get latest communication message from db.
+            PLAT_UINT32 msgType =  CUtility::getMsgHeadMsgType(uintBuf);
+            char key[64] = "\0";
+            sprintf(key,"%08xlatest%08x", m_srcID, msgType);
+            m_pRedis->app_set(key, uintBuf);
+        }
+        else
+            CUtility::pushBackPack(recv, uintBuf);
+    }//end of for
 
-        CUtility::pushBackPack(recv, uintBuf);
+    if (bfirst)
+    {
+        bfirst = false;
+        //push latest communication message to big package
+        PLAT_UINT32 msgTypeArray[] = {0x1401, 0x1402};
+        for (int i = 0; i < 2; i++)
+        {
+            memset(uintBuf, 0, SIZE_L_MAX);
+            getLatestMsg(msgTypeArray[i], uintBuf);
+            CUtility::pushBackPack(recv, uintBuf);
+        }
     }
+
     //plog("Now db %s count = %d\n", src, len);
 
     //------------------------------
@@ -1004,7 +1037,12 @@ PLAT_INT32 CAppInterface::AppRead()
     //get db data that is through app_set  in db, now get it.
     //Through DB beacuase ATO and ATP want get same resutl from different termainal.
     unsigned char dbBuf[NETSIZE] = "\0";
-    m_pRedis->app_get("linkstate", dbBuf);
+    static char linkstatekey[32] = "\0";
+    if ( CUtility::isCCType(m_srcID) )
+    {
+        sprintf(linkstatekey, "%08xlinkstate",CUtility::getCCID(m_srcID));
+    }
+    m_pRedis->app_get(linkstatekey, dbBuf);
     if(CUtility::needSwap())
     {
         CUtility::bigPackToLE(dbBuf);

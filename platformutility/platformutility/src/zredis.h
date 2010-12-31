@@ -48,6 +48,11 @@ public:
     int app_set(const char *,const PLAT_UINT8 *);
     int app_get(const char *,PLAT_UINT8* );
 
+    /* returns -1 if the key doesn't exists and 0 if it was removed 
+    * TODO add support to (Redis >= 1.1) remove multiple keys 
+    */
+    int app_del(const char *key);
+
 private:
     char* app_getid();
     void app2db(const PLAT_UINT8* appdata, char* dbbuf);
