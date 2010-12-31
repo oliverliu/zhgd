@@ -1038,9 +1038,13 @@ PLAT_INT32 CAppInterface::AppRead()
     //Through DB beacuase ATO and ATP want get same resutl from different termainal.
     unsigned char dbBuf[NETSIZE] = "\0";
     static char linkstatekey[32] = "\0";
-    if ( CUtility::isCCType(m_srcID) )
+    //if ( CUtility::isCCType(m_srcID) )
+    //{
+    //    sprintf(linkstatekey, "%08xlinkstate",CUtility::getCCID(m_srcID));
+    //}
+    //else
     {
-        sprintf(linkstatekey, "%08xlinkstate",CUtility::getCCID(m_srcID));
+        sprintf(linkstatekey, "%08xlinkstate",m_srcID);
     }
     m_pRedis->app_get(linkstatekey, dbBuf);
     if(CUtility::needSwap())

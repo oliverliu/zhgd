@@ -1309,14 +1309,14 @@ void ZSocket::setLinkstate(const unsigned char * dbBuf)
 {
     static char key[100] = "\0";
     sprintf(key, "%08xlinkstate",m_selfSID); 
-    //if ( CUtility::isCCID(m_selfSID) )
-    //{
-    //    sprintf(key, "%08xlinkstate",CUtility::getAtoIDFromCC(m_selfSID) ); 
-    //    m_pRedis->app_set(key, dbBuf);
-    //    sprintf(key, "%08xlinkstate",CUtility::getAtpIDFromCC(m_selfSID) ); 
-    //    m_pRedis->app_set(key, dbBuf);
-    //}
-    //else
+    if ( CUtility::isCCID(m_selfSID) )
+    {
+        sprintf(key, "%08xlinkstate",CUtility::getAtoIDFromCC(m_selfSID) ); 
+        m_pRedis->app_set(key, dbBuf);
+        sprintf(key, "%08xlinkstate",CUtility::getAtpIDFromCC(m_selfSID) ); 
+        m_pRedis->app_set(key, dbBuf);
+    }
+    else
         m_pRedis->app_set(key, dbBuf);
 }
 
