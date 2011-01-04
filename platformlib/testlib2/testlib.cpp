@@ -661,7 +661,7 @@ int _tmain(int argc, char* argv[])
     char str[64] = "n";
     do{
         fprintf(fp, "\n\nTest NO.%d\n", i++);
-	    ReadFormPlatform(); 
+	    ReadFromPlatform(); 
     
         memset(APP_READ_ADDR_SWAP,0, NETSIZE);
         memcpy(APP_READ_ADDR_SWAP, APP_READ_ADDR, NETSIZE);

@@ -180,6 +180,7 @@ int ZRedis::app_set(const char *key, const PLAT_UINT8* content)
     return 0;
 }
 
+//return value: -1: failed
 int ZRedis::app_get(const char *key, PLAT_UINT8* outbuf)
 {
     char *val = NULL;

@@ -151,6 +151,7 @@ PLAT_INT32 CAppInterface::AppInit()
 
 PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,char *host)
  {
+    PLAT_INT32 ret = 0;
     send = s;
     recv = r;
 
@@ -174,20 +175,41 @@ PLAT_INT32 CAppInterface::AppInit(PLAT_UINT8* s,PLAT_UINT8* r,PLAT_UINT32 sid,ch
     strDbvalue = reader.Get("self","dbip","127.0.0.1");
 
     m_srcID = reader.GetInteger("self", "SID", 0);
-        
-    m_pRedis->connect(strDbvalue.c_str());
 
-     //default use p1
+    m_bEnableLog = reader.GetInteger("self","enablelog",0) != 0 ? true : false;
+    if ( m_bEnableLog )
+    {
+       std::string logfile = reader.Get("self","liblog","");
+       if (logfile.length() != 0)
+       {
+           setLog(logfile.c_str());
+           printf("Platform lib log is saved into file %s\n", logfile.c_str());
+       }
+    }
+
+    //default use p1
     m_bUseP1 = reader.GetInteger("self","usep1", 1) == 1 ? true : false;
+    plog("Using p1 protocol: %s\n", m_bUseP1 ? "true" : "false");
+        
+    //connect db
+    if (m_pRedis->connect(strDbvalue.c_str()) != true )
+    {
+        plog("Failed: terminal connect db! Should stop run down!\n");
+        ret = -1;
+    }
 
     plog("Address: database = %s, agentip = %s, self SID = %0x\n",
         strDbvalue.c_str(), strAgentServer.c_str(), m_srcID);
-    //if(m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
+
+    //connect server agent
+    //if( m_bUseP1 && m_pSockClient->connectServer(strAgentServer.c_str()) < 0)
     //{
     //    plog("Failed: Socket client connect agent server\n");
+    //    ret = -1;
     //}
+    //app_init(uintBuf,s_host);
 
-    return 0;
+    return ret;
 }
 //The input buf MUST be little endian and is big package pointer.
 void CAppInterface::outputPackage(const PLAT_UBYTE * bigpack )
@@ -503,12 +525,12 @@ PLAT_INT32 CAppInterface::AppWrite()
             plog("Default proc for other type msg, just push it and transfer it\n");
             
             //push little package into correspond destination ID buffer in DB
-            if ( m_bUseP1 )
-            {
-                plog("push to db selfIDkey = %s\n", selfIDkey);
-                m_pRedis->app_rpush(selfIDkey, uintBuf);
-            }
-            else
+            //if ( m_bUseP1 )
+            //{
+            //    plog("push to db selfIDkey = %s\n", selfIDkey);
+            //    m_pRedis->app_rpush(selfIDkey, uintBuf);
+            //}
+            //else
             {
                 plog("push to db dstID = %08x\n", dstID);
                 m_pRedis->app_rpush(dstID, uintBuf); 
@@ -957,13 +979,14 @@ PLAT_UINT32 CAppInterface::getPlatformID( PLAT_UINT32 srcid)
 //      return srcID;
 //}
 
-void CAppInterface::getLatestMsg(const PLAT_UINT32 msgType, PLAT_UBYTE* uintBuf)
+bool CAppInterface::getLatestMsg(const PLAT_UINT32 msgType, PLAT_UBYTE* uintBuf)
 {
     char key[64] = "\0";
     sprintf(key,"%08xlatest%08x", m_srcID, msgType);
-    m_pRedis->app_get(key, uintBuf);
-    
-    m_pRedis->app_del(key);
+    bool bret = m_pRedis->app_get(key, uintBuf) != -1 ? true: false;
+    if ( bret )
+       m_pRedis->app_del(key);
+    return bret;
 }
 
 PLAT_INT32 CAppInterface::AppRead()
@@ -1016,8 +1039,10 @@ PLAT_INT32 CAppInterface::AppRead()
         for (int i = 0; i < 2; i++)
         {
             memset(uintBuf, 0, SIZE_L_MAX);
-            getLatestMsg(msgTypeArray[i], uintBuf);
-            CUtility::pushBackPack(recv, uintBuf);
+            if ( getLatestMsg(msgTypeArray[i], uintBuf) )
+            {
+                CUtility::pushBackPack(recv, uintBuf);
+            }
         }
     }
 

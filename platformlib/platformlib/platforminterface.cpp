@@ -7,7 +7,7 @@ signed int InitPlatformInterface ()
 	return g_appInter.AppInit();
 }
 
-signed int ReadFormPlatform ()
+signed int ReadFromPlatform ()
 {
 	return g_appInter.AppRead();
 }

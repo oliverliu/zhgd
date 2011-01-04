@@ -1156,7 +1156,12 @@ int ZSocket::procTransferCtrl(unsigned char * buffer)
         {
             CUtility::littlePackToBE(buffer);
         }
-        byteSent = write (sockidTo,(const char*) buffer, pack.size, 0);
+
+        //Only then write raw data to out, need skip 
+        //unit head and messsage head and
+        int skipCount = sizeof(T_MESSAGE_HEAD) + sizeof(T_UNIT_HEAD);
+        byteSent = write (sockidTo,(const char*) buffer + skipCount,
+            pack.size - skipCount, 0);
         if (byteSent == SS_FAILED)
         {
             int errNumber = safeSocket_getErrorNum (sockidTo);
@@ -1373,24 +1378,75 @@ void ZSocket::dealWithData(     int listnum     )
     } 
     else
     {
-        plog("Recv data lengh %d\n",recvlen );
+        plog("Recv data lengh %d that must be communication message!"
+            "Now only process this type message\n",recvlen );
         //get content
        
+        plog("Message from other: true, just push it after add header\n");
+        //if (CUtility::needSwap())
+        //{
+        //    CUtility::littlePackToLE(buffer);
+        //}
        //from other terminal to me. push back
-       
-        plog("Message from other: true, just push it\n");
-        if (CUtility::needSwap())
+       //now it is communication msg with raw data
+       //that has no message header and unit header
+       // Add unit header and message header to received data.
+        PLAT_UINT32 sid = getIDFromSockID(sockId);
+        PLAT_UINT32 did = m_selfSID;
+
+        //init message header and unit header
+        typedef union _t_uid{
+          struct {
+                    PLAT_UINT16 dataid;
+                    PLAT_UBYTE datainfo;
+                    PLAT_UBYTE datasource_type;
+                }S_uid_dec;
+                PLAT_UINT32 uid;
+        } U_uid;
+
+        U_uid Uuid;
+        memset(&Uuid, 0, sizeof(U_uid));
+        //generate uid
+        static PLAT_UBYTE index = 0x0;
+        Uuid.S_uid_dec.datasource_type = 0x85;
+        index ++;
+        if (index > 0xff )
         {
-            CUtility::littlePackToLE(buffer);
+            index = 0x1;
         }
-           
+        Uuid.S_uid_dec.datainfo = index;//[1-255]
+        Uuid.S_uid_dec.dataid = 0x0000;
+
+        T_UNIT_HEAD uheader;
+        memset(&uheader, 0, sizeof(T_UNIT_HEAD));
+        T_MESSAGE_HEAD mheader;
+        memset(&mheader, 0, sizeof(T_MESSAGE_HEAD));
+        
+        //generate unit header
+        uheader.unitId = Uuid.uid;
+        uheader.unitSize = recvlen + sizeof(T_MESSAGE_HEAD);
+
+        //generate message header
+        mheader.sequenceNum = 0;
+        mheader.timeStamp = 0;
+        mheader.SID = sid;
+        mheader.DID = did;
+        mheader.msgType = 0;
+        mheader.msgLen = recvlen;
+
+        PLAT_UBYTE bufferAdded[SIZE_L_MAX] = "\0";
+        memcpy(bufferAdded, &uheader, sizeof(T_UNIT_HEAD));
+        memcpy(bufferAdded + sizeof(T_UNIT_HEAD), &mheader, sizeof(T_MESSAGE_HEAD));
+        memcpy(bufferAdded + sizeof(T_UNIT_HEAD) + sizeof(T_MESSAGE_HEAD),
+            &buffer,recvlen);
+        
         s_packinfo pack;
-        getPackinfo(pack,buffer);
+        getPackinfo(pack,bufferAdded);
 
         //restore it for save into db
         if (CUtility::needSwap())
         {
-            CUtility::littlePackToBE(buffer);
+            CUtility::littlePackToBE(bufferAdded);
         }
 
         //the data is from other terminals, push it to db
@@ -1399,12 +1455,12 @@ void ZSocket::dealWithData(     int listnum     )
             plog("Message from other to CC terminal\n");
               
             m_pRedis->app_rpush( CUtility::getAtpIDFromCC(pack.did ) ,
-                                (const unsigned char*) buffer);//atp
+                                (const unsigned char*) bufferAdded);//atp
             m_pRedis->app_rpush( CUtility::getAtoIDFromCC(pack.did ),
-                                (const unsigned char*) buffer);//ato
+                                (const unsigned char*) bufferAdded);//ato
         }
         else
-            m_pRedis->app_rpush(pack.did, (const unsigned char*) buffer);
+            m_pRedis->app_rpush(pack.did, (const unsigned char*) bufferAdded);
        
   }//safeSocket_recv else end
 }

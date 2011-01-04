@@ -11,7 +11,7 @@ extern  unsigned char APP_READ_ADDR[NETSIZE];
 extern  unsigned char APP_WRITE_ADDR[NETSIZE];
 
 extern signed int InitPlatformInterface ();
-extern signed int ReadFormPlatform ();
+extern signed int ReadFromPlatform ();
 extern signed int WriteToPlatform();
 
 #endif //_PLATFORM_INTERFACE
