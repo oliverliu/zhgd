@@ -130,12 +130,11 @@ private:
 
 
 // Utility for encode big package
-// HAS NOT message header
-// -------------------------------------
-// |      Data index                                                                                                                    | Little Package1~256  |
+// -----------------------------------------------------------------------------------------------------
+// |      Data index                                                            | Little Package1~256  |
 // | Region unit number | platform state | platform health | offset unit[1~256] |                      |
 // |      4 Bytes       |     4 Bytes    |     4 Bytes     |    4*256 Bytes     |                      |
-// -------------------------------------
+// -----------------------------------------------------------------------------------------------------
 
 // In construct function, please give big package start address.
 // In destruct function or finish function will update Data index area
@@ -187,18 +186,18 @@ private:
 // -------------------------------------
 
 // HAS message header
-// -------------------------------------
+// ---------------------------------------------------
 // |      UnitHead      |  MsgHead    |  UnitData    |
 // | UnitID  | UnitSize |                            |
 // length
 // | 4 Bytes | 4 Bytes  | Sizes Bytes                |
-// -------------------------------------
+// ---------------------------------------------------
 
 //UnitID struct
-// -------------------------------------
+// ----------------------------------------------------------------
 // | Bit31 ~ bit30 | Bit29 ~ Bit24 | bit23 ~ Bit16 | Bit15 ~ Bit0 |
 // | data source   | data type     | data info     | data ID      |
-// -------------------------------------
+// ----------------------------------------------------------------
 class CLittlePack
 {
 public:
