@@ -20,3 +20,8 @@ method:
 
 Suggestions:
 	had better has a method to determine if the endian is changed or not. or else crash will give us more trouble.
+
+[20101212]
+1. client connect server successful, what will server responds? At the point, 
+can client read? zsocket.cpp L800, dealWithData()
+
